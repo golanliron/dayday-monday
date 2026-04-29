@@ -695,7 +695,95 @@ export function BoardDashboard({
             </svg>
             <span style={{ fontSize: 9, fontWeight: 600 }}>בקרוב</span>
           </button>
+
+          {/* Divider */}
+          <div style={{ width: 28, height: 1, background: hexToRgba(pc, 0.1), marginTop: 8 }} />
+
+          {/* New chat */}
+          <button onClick={() => { startNewChat(); setSidePanel(null); setMode("chat"); }} style={{
+            marginTop: 4, width: 44, height: 44, borderRadius: 12, border: "none", cursor: "pointer",
+            background: "transparent", color: "#999",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            gap: 2, transition: "all 0.2s",
+          }} title="שיחה חדשה">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span style={{ fontSize: 9, fontWeight: 600 }}>חדש</span>
+          </button>
+
+          {/* History */}
+          <button onClick={() => setShowHistory(!showHistory)} style={{
+            width: 44, height: 44, borderRadius: 12, border: "none", cursor: "pointer",
+            background: showHistory ? hexToRgba(pc, 0.15) : "transparent",
+            color: showHistory ? pc : "#999",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            gap: 2, transition: "all 0.2s", position: "relative",
+          }} title="היסטוריה">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 6L3 3" />
+              <path d="M12 7v5l4 2" />
+            </svg>
+            <span style={{ fontSize: 9, fontWeight: 600 }}>היסטוריה</span>
+            {chatHistory.length > 0 && (
+              <div style={{
+                position: "absolute", top: 2, left: 2, width: 16, height: 16,
+                borderRadius: "50%", background: pc, color: "#FFF",
+                fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
+              }}>{chatHistory.length}</div>
+            )}
+          </button>
         </div>
+
+        {/* ── History Panel ── */}
+        {showHistory && (
+          <div style={{
+            width: 260, background: "#FFF", borderLeft: `1px solid ${hexToRgba(pc, 0.1)}`,
+            overflowY: "auto", flexShrink: 0, padding: "16px 12px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: "#2D2252", margin: 0 }}>היסטוריית שיחות</h3>
+              <button onClick={() => setShowHistory(false)} style={{
+                background: "none", border: "none", cursor: "pointer", color: "#999", padding: 2,
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+            {chatHistory.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 20, color: "#999", fontSize: 12 }}>
+                אין שיחות קודמות
+              </div>
+            ) : (
+              chatHistory.map(session => (
+                <div key={session.id} style={{
+                  padding: "10px 12px", borderRadius: 10, marginBottom: 6, cursor: "pointer",
+                  background: activeSessionId === session.id ? hexToRgba(pc, 0.08) : hexToRgba(pc, 0.02),
+                  border: `1px solid ${activeSessionId === session.id ? hexToRgba(pc, 0.2) : hexToRgba(pc, 0.06)}`,
+                  transition: "all 0.15s",
+                }}
+                onClick={() => loadSession(session)}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#2D2252", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {session.title}
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 10, color: "#999" }}>
+                      {new Date(session.createdAt).toLocaleDateString("he-IL")} · {session.messages.length} הודעות
+                    </span>
+                    <button onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }} style={{
+                      background: "none", border: "none", cursor: "pointer", padding: 2, color: "#CCC",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#E17055")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "#CCC")}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
         {/* ── Side Panel ── */}
         {sidePanel && (
