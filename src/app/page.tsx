@@ -1,65 +1,977 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useRef } from "react";
+import { Spinner } from "@/components/ui/Spinner";
+import { BoardDashboard } from "@/components/board/BoardDashboard";
+import { loadBoard } from "@/lib/api-client";
+import type { MondayBoard, MondayItem } from "@/types";
+
+function IconChat() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6C5CE7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <path d="M8 10h.01" /><path d="M12 10h.01" /><path d="M16 10h.01" />
+    </svg>
+  );
+}
+
+function IconChart() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6C5CE7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" />
+    </svg>
+  );
+}
+
+function IconBrain() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6C5CE7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2a4 4 0 0 1 4 4c0 1.1-.9 2-2 2h-4a2 2 0 0 1-2-2 4 4 0 0 1 4-4z" />
+      <path d="M9 8v2a3 3 0 0 0 6 0V8" />
+      <path d="M8 14s-2 1-2 3 2 3 2 3" /><path d="M16 14s2 1 2 3-2 3-2 3" />
+      <path d="M12 18v4" />
+    </svg>
+  );
+}
+
+function IconKey() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6C5CE7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" />
+    </svg>
+  );
+}
+
+function IconHash() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6C5CE7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" />
+      <line x1="10" y1="3" x2="8" y2="21" /><line x1="16" y1="3" x2="14" y2="21" />
+    </svg>
+  );
+}
+
+function IconZap() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6C5CE7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
+function IconDoc() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6C5CE7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  );
+}
+
+const T = {
+  he: {
+    nav: { features: "יתרונות", how: "איך זה עובד", pricing: "מחירים", cta: "התחילו עכשיו" },
+    hero: {
+      badge: "DayDay",
+      title1: "AI שמוציא תשובות",
+      title2: "מה-",
+      titleBrand: "Monday",
+      title3: " שלכם.",
+      sub: "לא דוחות. תשובות.",
+      desc: "תתחילו לדבר על המאנדיי שלכם מהיום! דוחות מרהיבים, נתונים ברורים, דפוסים שלא ראיתם. חד, קולע, יודע מה אתם צריכים כבר מההתקשרות הראשונה.",
+      cta: "התחילו עכשיו",
+    },
+    features: {
+      title: "ארגז הכלים שלכם",
+      sub: "כל מה שצריך כדי להפוך את המאנדיי למנוע תשובות",
+      items: [
+        { title: "צ׳אט חכם על הבורד", desc: "שאלו את המאנדיי שלכם כל שאלה בשפה חופשית וקבלו תשובה מיידית עם נתונים אמיתיים" },
+        { title: "דשבורד ויזואלי", desc: "גרפים ותובנות שנבנים אוטומטית מהנתונים שלכם, מוכנים לשליחה להנהלה" },
+        { title: "אוטומציות מותאמות", desc: "המערכת מציעה אוטומציות חכמות שחוסכות לכם שעות עבודה ידנית כל שבוע" },
+        { title: "דוחות אימפקט מרהיבים", desc: "הפיקו דוחות מקצועיים לתורמים ולהנהלה ישירות מהנתונים, בלי לכתוב מילה" },
+      ],
+    },
+    steps: {
+      title: "איך זה עובד?",
+      sub: "שלושה צעדים ואתם בפנים",
+      items: [
+        { title: "הדביקו API Token", desc: "מהפרופיל שלכם במאנדיי" },
+        { title: "הזינו מספר בורד", desc: "מה-URL של הבורד" },
+        { title: "קבלו תשובות", desc: "ותתחילו לדבר עם הנתונים שלכם" },
+      ],
+    },
+    pricing: {
+      title: "תוכניות ומחירים",
+      sub: "בחרו את התוכנית שמתאימה לכם",
+      plans: [
+        { name: "בקטנה", desc: "נתחיל עם בורד אחד, נראה מה זה יכול לעשות", boards: "1" },
+        { name: "יאללה שניים", desc: "שני בורדים, מה יכול להיות", boards: "2" },
+        { name: "השלישייה שלי", desc: "שלושה בורדים, עכשיו זה כבר רציני", boards: "3" },
+        { name: "הכל שלי", desc: "כל הבורדים שלכם, תצליחו אותנו", boards: "ללא הגבלה" },
+      ],
+      popular: "הכי פופולרי",
+      month: "₪/חודש",
+      boardLabel: (b: string) => b === "ללא הגבלה" ? "ללא הגבלת בורדים" : `${b} ${Number(b) === 1 ? "בורד" : "בורדים"}`,
+      cta: "התחילו עכשיו",
+      addon: { badge: "PREMIUM ADD-ON", title: "המערכת שלכם. המותג שלכם.", desc: "לוגו, צבעים, עיצוב מלא. הלקוחות שלכם יחשבו שבניתם את זה לבד. מערכת AI ממותגת שנראית מיליון דולר.", cta: "הוסיפו מיתוג" },
+    },
+    form: {
+      title: "מתחילים עכשיו",
+      sub: "הכניסו את הפרטים והדשבורד מוכן תוך שניות",
+      tokenLabel: "API Token",
+      tokenHelp: "איך מוצאים את ה-API Token?",
+      tokenSteps: [
+        "לחצו על התמונה שלכם בפינה השמאלית התחתונה במאנדיי",
+        "בחרו \"Developers\" מהתפריט",
+        "לחצו על \"My Access Tokens\" בצד שמאל",
+        "לחצו \"Copy\" והדביקו כאן",
+      ],
+      tokenPath: "Monday → Profile → Developers → My Access Tokens",
+      boardLabel: "מספר בורד",
+      boardHelp: "איך מוצאים את מספר הבורד?",
+      boardSteps: [
+        "פתחו את הבורד שלכם במאנדיי",
+        "הסתכלו על ה-URL בשורת הכתובת של הדפדפן",
+        "המספר שמופיע אחרי /boards/ הוא מספר הבורד",
+      ],
+      boardUrlHint: "נמצא ב-URL: monday.com/boards/",
+      boardCopy: "העתיקו את המספר הזה",
+      loadBtn: "התחילו — הצגת דשבורד",
+      loading: "טוען את הבורד...",
+    },
+    comingSoon: {
+      title: "בקרוב",
+      items: [
+        "תרגום דוחות לאנגלית",
+      ],
+    },
+    contact: {
+      title: "רוצים יותר מה-DayDay שלכם?",
+      sub: "טענות, מחמאות, קומפלימנטים?",
+      cta: "צרו קשר",
+    },
+    footer: "כל הזכויות שמורות.",
+  },
+  en: {
+    nav: { features: "Features", how: "How it works", pricing: "Pricing", cta: "Get Started" },
+    hero: {
+      badge: "DayDay",
+      title1: "AI that gets answers",
+      title2: "from your ",
+      titleBrand: "Monday",
+      title3: ".",
+      sub: "Not reports. Answers.",
+      desc: "Start working smarter with your Monday.com. Stunning reports, clear data, patterns you never saw. Sharp, precise, knows what you need from day one.",
+      cta: "Get Started",
+    },
+    features: {
+      title: "Your Toolkit",
+      sub: "Everything you need to turn Monday into an answer engine",
+      items: [
+        { title: "Smart Board Chat", desc: "Ask your Monday any question in plain language and get instant answers with real data" },
+        { title: "Visual Dashboard", desc: "Charts and insights built automatically from your data, ready to send to management" },
+        { title: "Custom Automations", desc: "The system suggests smart automations that save you hours of manual work every week" },
+        { title: "Impact Reports", desc: "Generate professional reports for donors and management directly from data, without writing a word" },
+      ],
+    },
+    steps: {
+      title: "How it works?",
+      sub: "Three steps and you're in",
+      items: [
+        { title: "Paste API Token", desc: "From your Monday profile" },
+        { title: "Enter Board ID", desc: "From the board URL" },
+        { title: "Get Answers", desc: "Start talking to your data" },
+      ],
+    },
+    pricing: {
+      title: "Plans & Pricing",
+      sub: "Choose the plan that fits you",
+      plans: [
+        { name: "Starter", desc: "Start with one board, see what it can do", boards: "1" },
+        { name: "Duo", desc: "Two boards, what could go wrong", boards: "2" },
+        { name: "Pro", desc: "Three boards, now we're serious", boards: "3" },
+        { name: "Unlimited", desc: "All your boards, no limits", boards: "Unlimited" },
+      ],
+      popular: "Most Popular",
+      month: "$/mo",
+      boardLabel: (b: string) => b === "Unlimited" ? "Unlimited boards" : `${b} board${Number(b) === 1 ? "" : "s"}`,
+      cta: "Get Started",
+      addon: { badge: "PREMIUM ADD-ON", title: "Your system. Your brand.", desc: "Logo, colors, full design. Your clients will think you built it yourself. A branded AI system that looks like a million dollars.", cta: "Add Branding" },
+    },
+    form: {
+      title: "Get Started Now",
+      sub: "Enter your details and your dashboard is ready in seconds",
+      tokenLabel: "API Token",
+      tokenHelp: "How to find your API Token?",
+      tokenSteps: [
+        "Click your profile picture at the bottom-left of Monday",
+        "Select \"Developers\" from the menu",
+        "Click \"My Access Tokens\" on the left",
+        "Click \"Copy\" and paste here",
+      ],
+      tokenPath: "Monday → Profile → Developers → My Access Tokens",
+      boardLabel: "Board ID",
+      boardHelp: "How to find your Board ID?",
+      boardSteps: [
+        "Open your board in Monday",
+        "Look at the URL in the browser address bar",
+        "The number after /boards/ is your Board ID",
+      ],
+      boardUrlHint: "Found in URL: monday.com/boards/",
+      boardCopy: "Copy this number",
+      loadBtn: "Get Started — Show Dashboard",
+      loading: "Loading board...",
+    },
+    comingSoon: {
+      title: "Coming Soon",
+      items: [
+        "Report translation to English",
+      ],
+    },
+    contact: {
+      title: "Want more from your DayDay?",
+      sub: "Complaints, compliments, suggestions?",
+      cta: "Contact Us",
+    },
+    footer: "All rights reserved.",
+  },
+};
+
+type Lang = "he" | "en";
+
+const ICONS = [IconChat, IconChart, IconBrain, IconDoc];
+const STEP_ICONS = [IconKey, IconHash, IconZap];
+const STEP_EMOJIS = [["👤", "⚙️", "🔑", "📋"], ["📋", "🔗", "🔢"]];
 
 export default function Home() {
+  const [apiToken, setApiToken] = useState("");
+  const [boardId, setBoardId] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [board, setBoard] = useState<MondayBoard | null>(null);
+  const [items, setItems] = useState<MondayItem[]>([]);
+  const [mobileMenu, setMobileMenu] = useState(false);
+  const [showTokenHelp, setShowTokenHelp] = useState(false);
+  const [showBoardHelp, setShowBoardHelp] = useState(false);
+  const [lang, setLang] = useState<Lang>("he");
+  const t = T[lang];
+  const formRef = useRef<HTMLDivElement>(null);
+
+  async function handleLoad() {
+    const id = boardId.trim();
+    const token = apiToken.trim();
+    if (!id || !token) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await loadBoard(id, token);
+      setBoard(data.board);
+      setItems(data.items);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "שגיאה בטעינת הבורד");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleBack() {
+    setBoard(null);
+    setItems([]);
+    setError(null);
+  }
+
+  function scrollToForm() {
+    formRef.current?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  if (board) {
+    return <BoardDashboard board={board} items={items} onBack={handleBack} apiToken={apiToken} boardId={boardId} />;
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div dir={lang === "he" ? "rtl" : "ltr"} style={{ fontFamily: "'Rubik', sans-serif", color: "#2D2252" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .desktop-nav { display: none !important; }
+          .mobile-burger { display: flex !important; }
+          .features-grid { grid-template-columns: 1fr 1fr !important; }
+          .hero-title { font-size: 32px !important; }
+          .hero-sub { font-size: 16px !important; }
+          .section-pad { padding: 50px 16px !important; }
+        }
+        @media (max-width: 480px) {
+          .features-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+      {/* ── Navbar ── */}
+      <nav style={{
+        position: "fixed", top: 0, right: 0, left: 0, zIndex: 50,
+        background: "rgba(255,255,255,0.92)", backdropFilter: "blur(12px)",
+        borderBottom: "1px solid rgba(108,92,231,0.1)",
+        padding: "0 24px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: "linear-gradient(135deg, #6C5CE7, #A29BFE)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 18, color: "#FFF", fontWeight: 800,
+          }}>A</div>
+          <span style={{
+            fontSize: 20, fontWeight: 800,
+            background: "linear-gradient(90deg, #6C5CE7, #A29BFE)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+          }}>DayDay</span>
+        </div>
+        <div className="desktop-nav" style={{ display: "flex", gap: 28, alignItems: "center" }}>
+          <a href="#features" style={{ color: "#6C5CE7", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>{t.nav.features}</a>
+          <a href="#how" style={{ color: "#6C5CE7", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>{t.nav.how}</a>
+          <a href="#pricing" style={{ color: "#6C5CE7", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>{t.nav.pricing}</a>
+          {/* Language toggle */}
+          <button onClick={() => setLang(lang === "he" ? "en" : "he")} style={{
+            background: "rgba(108,92,231,0.06)", border: "1.5px solid rgba(108,92,231,0.15)",
+            borderRadius: 8, padding: "6px 12px", cursor: "pointer",
+            color: "#6C5CE7", fontSize: 13, fontWeight: 700,
+            display: "flex", alignItems: "center", gap: 5, transition: "all 0.2s",
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+            {lang === "he" ? "EN" : "עב"}
+          </button>
+          <button onClick={scrollToForm} style={{
+            background: "linear-gradient(135deg, #6C5CE7, #A29BFE)",
+            color: "#FFF", border: "none", borderRadius: 10,
+            padding: "9px 22px", fontSize: 14, fontWeight: 700,
+            cursor: "pointer", transition: "all 0.3s ease",
+          }}>{t.nav.cta}</button>
+        </div>
+        {/* Hamburger */}
+        <button className="mobile-burger" onClick={() => setMobileMenu(!mobileMenu)} style={{
+          display: "none", background: "none", border: "none", cursor: "pointer",
+          flexDirection: "column", gap: 5, padding: 4,
+        }}>
+          <div style={{ width: 24, height: 2.5, borderRadius: 2, background: "#6C5CE7", transition: "all 0.3s", transform: mobileMenu ? "rotate(45deg) translate(5px, 5px)" : "none" }} />
+          <div style={{ width: 24, height: 2.5, borderRadius: 2, background: "#6C5CE7", transition: "all 0.3s", opacity: mobileMenu ? 0 : 1 }} />
+          <div style={{ width: 24, height: 2.5, borderRadius: 2, background: "#6C5CE7", transition: "all 0.3s", transform: mobileMenu ? "rotate(-45deg) translate(5px, -5px)" : "none" }} />
+        </button>
+      </nav>
+      {/* Mobile menu overlay */}
+      {mobileMenu && (
+        <div style={{
+          position: "fixed", top: 64, right: 0, left: 0, bottom: 0, zIndex: 49,
+          background: "rgba(255,255,255,0.97)", backdropFilter: "blur(12px)",
+          display: "flex", flexDirection: "column", alignItems: "center",
+          paddingTop: 40, gap: 24,
+        }}>
+          <a href="#features" onClick={() => setMobileMenu(false)} style={{ color: "#6C5CE7", fontSize: 18, fontWeight: 600, textDecoration: "none" }}>{t.nav.features}</a>
+          <a href="#how" onClick={() => setMobileMenu(false)} style={{ color: "#6C5CE7", fontSize: 18, fontWeight: 600, textDecoration: "none" }}>{t.nav.how}</a>
+          <a href="#pricing" onClick={() => setMobileMenu(false)} style={{ color: "#6C5CE7", fontSize: 18, fontWeight: 600, textDecoration: "none" }}>{t.nav.pricing}</a>
+          <button onClick={() => { setLang(lang === "he" ? "en" : "he"); setMobileMenu(false); }} style={{
+            background: "rgba(108,92,231,0.06)", border: "1.5px solid rgba(108,92,231,0.15)",
+            borderRadius: 10, padding: "10px 30px", cursor: "pointer",
+            color: "#6C5CE7", fontSize: 16, fontWeight: 700,
+          }}>{lang === "he" ? "English" : "עברית"}</button>
+          <button onClick={() => { setMobileMenu(false); scrollToForm(); }} style={{
+            background: "linear-gradient(135deg, #6C5CE7, #A29BFE)",
+            color: "#FFF", border: "none", borderRadius: 12,
+            padding: "12px 40px", fontSize: 16, fontWeight: 700, cursor: "pointer",
+          }}>{t.nav.cta}</button>
+        </div>
+      )}
+
+      {/* ── Hero ── */}
+      <section style={{
+        minHeight: "100vh", display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", textAlign: "center",
+        padding: "120px 24px 80px",
+        background: "#FFFFFF",
+        position: "relative", overflow: "hidden",
+      }}>
+        <div style={{
+          position: "absolute", width: 600, height: 600, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(108,92,231,0.06) 0%, transparent 70%)",
+          top: -150, left: -150,
+        }} />
+        <div style={{
+          position: "absolute", width: 500, height: 500, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(162,155,254,0.08) 0%, transparent 70%)",
+          bottom: -100, right: -120,
+        }} />
+
+        <div className="fade-up" style={{ position: "relative", zIndex: 1, maxWidth: 700 }}>
+          <div style={{
+            display: "inline-block", background: "rgba(108,92,231,0.08)",
+            borderRadius: 30, padding: "6px 20px", marginBottom: 24,
+            fontSize: 13, fontWeight: 700, color: "#6C5CE7",
+          }}>
+            {t.hero.badge}
+          </div>
+          <h1 style={{
+            fontSize: "clamp(36px, 5vw, 56px)", fontWeight: 900, lineHeight: 1.2,
+            marginBottom: 24, color: "#2D2252",
+          }}>
+            {t.hero.title1}
+            <br />
+            {t.hero.title2}<span style={{
+              background: "linear-gradient(135deg, #6C5CE7, #A29BFE)",
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            }}>{t.hero.titleBrand}</span>{t.hero.title3}
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p style={{
+            fontSize: 22, color: "#6C5CE7", lineHeight: 1.6,
+            maxWidth: 520, margin: "0 auto 12px", fontWeight: 700,
+          }}>
+            {t.hero.sub}
           </p>
+          <p style={{
+            fontSize: 16, color: "#7C6FD0", lineHeight: 1.8,
+            maxWidth: 480, margin: "0 auto 36px",
+          }}>
+            {t.hero.desc}
+          </p>
+          <button onClick={scrollToForm} style={{
+            background: "linear-gradient(135deg, #6C5CE7, #A29BFE)",
+            color: "#FFF", border: "none", borderRadius: 14,
+            padding: "16px 40px", fontSize: 17, fontWeight: 700,
+            cursor: "pointer", transition: "all 0.3s ease",
+            boxShadow: "0 8px 30px rgba(108,92,231,0.3)",
+          }}>
+            {t.hero.cta}
+          </button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      </section>
+
+      {/* ── Features ── */}
+      <section id="features" style={{
+        padding: "80px 24px", background: "#F9F7FF", textAlign: "center",
+      }}>
+        <div className="fade-up" style={{ maxWidth: 900, margin: "0 auto" }}>
+          <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12, color: "#2D2252" }}>
+            {t.features.title}
+          </h2>
+          <p style={{ color: "#7C6FD0", fontSize: 16, marginBottom: 50, lineHeight: 1.7 }}>
+            {t.features.sub}
+          </p>
+          <div className="features-grid" style={{
+            display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 16,
+          }}>
+            {t.features.items.map((f, i) => {
+              const Icon = ICONS[i];
+              return (
+              <div key={i} className={`fade-up-${i + 2}`} style={{
+                background: "#FFFFFF", borderRadius: 18, padding: "28px 20px",
+                border: "1px solid rgba(108,92,231,0.1)",
+                transition: "all 0.3s ease",
+                cursor: "default",
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLDivElement).style.transform = "translateY(-6px)";
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 16px 40px rgba(108,92,231,0.12)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(108,92,231,0.25)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(108,92,231,0.1)";
+              }}
+              >
+                <div style={{
+                  width: 48, height: 48, borderRadius: 14,
+                  background: "linear-gradient(135deg, rgba(108,92,231,0.08), rgba(162,155,254,0.12))",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 16px",
+                }}><Icon /></div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#2D2252" }}>{f.title}</h3>
+                <p style={{ fontSize: 13, color: "#7C6FD0", lineHeight: 1.6, margin: 0 }}>{f.desc}</p>
+              </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How it works ── */}
+      <section id="how" style={{
+        padding: "80px 24px",
+        background: "#FFFFFF",
+        textAlign: "center",
+      }}>
+        <div style={{ maxWidth: 800, margin: "0 auto" }}>
+          <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12, color: "#2D2252" }}>
+            {t.steps.title}
+          </h2>
+          <p style={{ color: "#7C6FD0", fontSize: 16, marginBottom: 50 }}>
+            {t.steps.sub}
+          </p>
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 28,
+          }}>
+            {t.steps.items.map((s, i) => {
+              const Icon = STEP_ICONS[i];
+              return (
+              <div key={i} style={{
+                background: "#F9F7FF", borderRadius: 20, padding: "36px 24px",
+                border: "1px solid rgba(108,92,231,0.1)",
+                position: "relative",
+              }}>
+                <div style={{
+                  width: 52, height: 52, borderRadius: 16,
+                  background: "linear-gradient(135deg, rgba(108,92,231,0.1), rgba(162,155,254,0.15))",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 18px",
+                }}><Icon /></div>
+                <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, color: "#2D2252" }}>{s.title}</h3>
+                <p style={{ fontSize: 14, color: "#7C6FD0", margin: 0 }}>{s.desc}</p>
+              </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Pricing ── */}
+      <section id="pricing" style={{
+        padding: "80px 24px", background: "#F9F7FF", textAlign: "center",
+      }}>
+        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+          <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12, color: "#2D2252" }}>
+            {t.pricing.title}
+          </h2>
+          <p style={{ color: "#7C6FD0", fontSize: 16, marginBottom: 50 }}>
+            {t.pricing.sub}
+          </p>
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+            gap: 20, alignItems: "stretch",
+          }}>
+            {t.pricing.plans.map((plan, idx) => ({ ...plan, price: ["19.90", "29.90", "59.90", "399"][idx], popular: idx === 2 })).map((plan, i) => (
+              <div key={i} style={{
+                background: plan.popular ? "linear-gradient(135deg, #6C5CE7, #A29BFE)" : "#FFFFFF",
+                borderRadius: 22, padding: plan.popular ? "4px" : "0",
+                position: "relative",
+              }}>
+                {plan.popular && (
+                  <div style={{
+                    position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)",
+                    background: "#FDCB6E", color: "#2D2252", fontSize: 11, fontWeight: 800,
+                    padding: "4px 14px", borderRadius: 20,
+                  }}>
+                    {t.pricing.popular}
+                  </div>
+                )}
+                <div style={{
+                  background: "#FFFFFF", borderRadius: plan.popular ? 19 : 22,
+                  padding: "32px 24px", height: "100%",
+                  border: plan.popular ? "none" : "1px solid rgba(108,92,231,0.1)",
+                  display: "flex", flexDirection: "column", alignItems: "center",
+                }}>
+                  <h3 style={{ fontSize: 20, fontWeight: 800, color: "#2D2252", marginBottom: 8 }}>{plan.name}</h3>
+                  <p style={{ fontSize: 13, color: "#7C6FD0", marginBottom: 20, lineHeight: 1.6, minHeight: 40 }}>{plan.desc}</p>
+                  <div style={{ marginBottom: 8 }}>
+                    <span style={{
+                      fontSize: 40, fontWeight: 900,
+                      background: "linear-gradient(135deg, #6C5CE7, #A29BFE)",
+                      WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                    }}>{plan.price}</span>
+                    <span style={{ fontSize: 16, color: "#7C6FD0", fontWeight: 600 }}> {t.pricing.month}</span>
+                  </div>
+                  <div style={{
+                    background: "rgba(108,92,231,0.06)", borderRadius: 10, padding: "8px 16px",
+                    fontSize: 13, color: "#6C5CE7", fontWeight: 600, marginBottom: 20,
+                  }}>
+                    {t.pricing.boardLabel(plan.boards)}
+                  </div>
+                  <button onClick={scrollToForm} style={{
+                    width: "100%",
+                    background: plan.popular
+                      ? "linear-gradient(135deg, #6C5CE7, #A29BFE)"
+                      : "rgba(108,92,231,0.08)",
+                    color: plan.popular ? "#FFF" : "#6C5CE7",
+                    border: "none", borderRadius: 12,
+                    padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer",
+                    transition: "all 0.3s",
+                    boxShadow: plan.popular ? "0 6px 20px rgba(108,92,231,0.25)" : "none",
+                  }}>
+                    {t.pricing.cta}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Branding Add-on */}
+          <style>{`
+            @keyframes brandGlow {
+              0%, 100% { box-shadow: 0 0 20px rgba(108,92,231,0.3), 0 0 60px rgba(162,155,254,0.15); }
+              50% { box-shadow: 0 0 30px rgba(108,92,231,0.5), 0 0 80px rgba(162,155,254,0.25); }
+            }
+            @keyframes gradientShift {
+              0% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
+              100% { background-position: 0% 50%; }
+            }
+            @keyframes pricePulse {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.05); }
+            }
+          `}</style>
+          <div style={{
+            marginTop: 40, position: "relative", borderRadius: 24,
+            background: "linear-gradient(135deg, #6C5CE7, #A29BFE, #FD79A8, #6C5CE7)",
+            backgroundSize: "300% 300%",
+            animation: "gradientShift 6s ease infinite, brandGlow 3s ease-in-out infinite",
+            padding: 3,
+          }}>
+            <div style={{
+              background: "linear-gradient(135deg, rgba(255,255,255,0.97), rgba(249,247,255,0.97))",
+              borderRadius: 22, padding: "36px 40px",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              gap: 28, flexWrap: "wrap", position: "relative", overflow: "hidden",
+            }}>
+              {/* Decorative sparkles */}
+              <div style={{
+                position: "absolute", top: 14, left: 20, fontSize: 20, opacity: 0.3,
+                animation: "pricePulse 2s ease-in-out infinite",
+              }}>&#10024;</div>
+              <div style={{
+                position: "absolute", bottom: 14, right: 120, fontSize: 16, opacity: 0.2,
+                animation: "pricePulse 2.5s ease-in-out infinite 0.5s",
+              }}>&#10024;</div>
+              <div style={{
+                position: "absolute", top: 20, left: "45%", fontSize: 12, opacity: 0.15,
+                animation: "pricePulse 3s ease-in-out infinite 1s",
+              }}>&#10024;</div>
+
+              <div style={{ textAlign: "right", flex: 1, minWidth: 260 }}>
+                <div style={{
+                  display: "inline-block",
+                  background: "linear-gradient(135deg, #6C5CE7, #FD79A8)",
+                  borderRadius: 20, padding: "5px 16px", marginBottom: 14,
+                  fontSize: 11, fontWeight: 800, color: "#FFF",
+                  letterSpacing: "0.5px",
+                }}>
+                  {t.pricing.addon.badge}
+                </div>
+                <h3 style={{ fontSize: 24, fontWeight: 900, color: "#2D2252", marginBottom: 10 }}>
+                  {t.pricing.addon.title}
+                </h3>
+                <p style={{ fontSize: 15, color: "#7C6FD0", lineHeight: 1.7, margin: 0 }}>
+                  {t.pricing.addon.desc}
+                </p>
+              </div>
+              <div style={{ textAlign: "center", minWidth: 180 }}>
+                <div style={{
+                  marginBottom: 16,
+                  animation: "pricePulse 3s ease-in-out infinite",
+                }}>
+                  <span style={{
+                    fontSize: 42, fontWeight: 900,
+                    background: "linear-gradient(135deg, #6C5CE7, #FD79A8)",
+                    WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                  }}>+79.90</span>
+                  <span style={{ fontSize: 15, color: "#7C6FD0", fontWeight: 600 }}> {t.pricing.month}</span>
+                </div>
+                <button onClick={scrollToForm} style={{
+                  background: "linear-gradient(135deg, #6C5CE7, #A29BFE, #FD79A8)",
+                  backgroundSize: "200% 200%",
+                  animation: "gradientShift 4s ease infinite",
+                  color: "#FFF", border: "none", borderRadius: 14,
+                  padding: "14px 36px", fontSize: 16, fontWeight: 800,
+                  cursor: "pointer", transition: "all 0.3s",
+                  boxShadow: "0 8px 25px rgba(108,92,231,0.35)",
+                  letterSpacing: "0.5px",
+                }}>
+                  {t.pricing.addon.cta}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Coming Soon ── */}
+      <section style={{
+        padding: "48px 24px", background: "#FFFFFF", textAlign: "center",
+      }}>
+        <div className="fade-up" style={{ maxWidth: 600, margin: "0 auto" }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            background: "rgba(108,92,231,0.06)", borderRadius: 16,
+            padding: "14px 28px",
+            border: "1px dashed rgba(108,92,231,0.2)",
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C5CE7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#6C5CE7" }}>
+              {t.comingSoon.title}:
+            </span>
+            {t.comingSoon.items.map((item, i) => (
+              <span key={i} style={{ fontSize: 14, color: "#2D2252", fontWeight: 600 }}>{item}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Get Started Form ── */}
+      <section ref={formRef} id="start" style={{
+        padding: "80px 24px", background: "#FFFFFF", textAlign: "center",
+      }}>
+        <div style={{ maxWidth: 480, margin: "0 auto" }}>
+          <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12, color: "#2D2252" }}>
+            {t.form.title}
+          </h2>
+          <p style={{ color: "#7C6FD0", fontSize: 16, marginBottom: 36 }}>
+            {t.form.sub}
+          </p>
+
+          <div style={{
+            background: "#FFFFFF", borderRadius: 22, padding: "36px 32px",
+            border: "1px solid rgba(108,92,231,0.1)",
+            boxShadow: "0 8px 40px rgba(108,92,231,0.08)",
+            textAlign: "right",
+          }}>
+            {/* API Token */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <label style={{ fontWeight: 700, fontSize: 14, color: "#2D2252" }}>
+                {t.form.tokenLabel}
+              </label>
+              <button onClick={() => setShowTokenHelp(!showTokenHelp)} style={{
+                width: 22, height: 22, borderRadius: "50%",
+                background: showTokenHelp ? "#6C5CE7" : "rgba(108,92,231,0.1)",
+                color: showTokenHelp ? "#FFF" : "#6C5CE7",
+                border: "none", fontSize: 12, fontWeight: 800, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.2s",
+              }}>?</button>
+            </div>
+            {showTokenHelp && (
+              <div style={{
+                background: "linear-gradient(135deg, rgba(108,92,231,0.06), rgba(162,155,254,0.08))",
+                borderRadius: 14, padding: "16px 18px", marginBottom: 14,
+                border: "1px solid rgba(108,92,231,0.12)",
+              }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#2D2252", margin: "0 0 12px" }}>
+                  {t.form.tokenHelp}
+                </p>
+                {t.form.tokenSteps.map((text, idx) => ({ step: String(idx + 1), icon: ["👤", "⚙️", "🔑", "📋"][idx], text })).map((s) => (
+                  <div key={s.step} style={{
+                    display: "flex", alignItems: "center", gap: 10, marginBottom: 8,
+                  }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8,
+                      background: "#6C5CE7", color: "#FFF",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 13, fontWeight: 800, flexShrink: 0,
+                    }}>{s.step}</div>
+                    <span style={{ fontSize: 13, color: "#2D2252", lineHeight: 1.5 }}>
+                      <span style={{ marginLeft: 4 }}>{s.icon}</span> {s.text}
+                    </span>
+                  </div>
+                ))}
+                <div style={{
+                  marginTop: 10, background: "rgba(108,92,231,0.08)", borderRadius: 8,
+                  padding: "8px 12px", fontSize: 11, color: "#6C5CE7", fontWeight: 600,
+                  direction: "ltr", textAlign: "left", fontFamily: "monospace",
+                }}>
+                  {t.form.tokenPath}
+                </div>
+              </div>
+            )}
+            {!showTokenHelp && (
+              <p style={{ color: "#A29BFE", fontSize: 12, margin: "0 0 10px", lineHeight: 1.5 }}>
+                {t.form.tokenPath}
+              </p>
+            )}
+            <input
+              type="password"
+              value={apiToken}
+              onChange={(e) => setApiToken(e.target.value)}
+              placeholder="eyJhbGciOi..."
+              style={{
+                width: "100%", background: "#F9F7FF",
+                border: "1.5px solid rgba(108,92,231,0.15)",
+                color: "#2D2252", borderRadius: 12,
+                padding: "13px 16px", fontSize: 14,
+                outline: "none", direction: "ltr",
+                transition: "border-color 0.2s",
+                marginBottom: 20,
+              }}
+              onFocus={e => e.target.style.borderColor = "#6C5CE7"}
+              onBlur={e => e.target.style.borderColor = "rgba(108,92,231,0.15)"}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
+
+            {/* Board ID */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <label style={{ fontWeight: 700, fontSize: 14, color: "#2D2252" }}>
+                {t.form.boardLabel}
+              </label>
+              <button onClick={() => setShowBoardHelp(!showBoardHelp)} style={{
+                width: 22, height: 22, borderRadius: "50%",
+                background: showBoardHelp ? "#6C5CE7" : "rgba(108,92,231,0.1)",
+                color: showBoardHelp ? "#FFF" : "#6C5CE7",
+                border: "none", fontSize: 12, fontWeight: 800, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.2s",
+              }}>?</button>
+            </div>
+            {showBoardHelp && (
+              <div style={{
+                background: "linear-gradient(135deg, rgba(108,92,231,0.06), rgba(162,155,254,0.08))",
+                borderRadius: 14, padding: "16px 18px", marginBottom: 14,
+                border: "1px solid rgba(108,92,231,0.12)",
+              }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#2D2252", margin: "0 0 12px" }}>
+                  {t.form.boardHelp}
+                </p>
+                {t.form.boardSteps.map((text, idx) => ({ step: String(idx + 1), icon: ["📋", "🔗", "🔢"][idx], text })).map((s) => (
+                  <div key={s.step} style={{
+                    display: "flex", alignItems: "center", gap: 10, marginBottom: 8,
+                  }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8,
+                      background: "#6C5CE7", color: "#FFF",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 13, fontWeight: 800, flexShrink: 0,
+                    }}>{s.step}</div>
+                    <span style={{ fontSize: 13, color: "#2D2252", lineHeight: 1.5 }}>
+                      <span style={{ marginLeft: 4 }}>{s.icon}</span> {s.text}
+                    </span>
+                  </div>
+                ))}
+                <div style={{
+                  marginTop: 10, background: "#2D2252", borderRadius: 10,
+                  padding: "12px 16px", direction: "ltr", textAlign: "left",
+                  fontFamily: "monospace", fontSize: 13, position: "relative",
+                }}>
+                  <span style={{ color: "rgba(255,255,255,0.5)" }}>monday.com/boards/</span>
+                  <span style={{
+                    color: "#A29BFE", fontWeight: 800,
+                    background: "rgba(108,92,231,0.2)", borderRadius: 4,
+                    padding: "2px 6px",
+                  }}>1234567890</span>
+                  <div style={{
+                    position: "absolute", top: -8, right: 30,
+                    fontSize: 18, lineHeight: 1,
+                  }}>
+                    <span style={{
+                      background: "#6C5CE7", color: "#FFF", borderRadius: 6,
+                      padding: "2px 8px", fontSize: 10, fontWeight: 800,
+                      fontFamily: "'Rubik', sans-serif",
+                    }}>{t.form.boardCopy}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {!showBoardHelp && (
+              <p style={{ color: "#A29BFE", fontSize: 12, margin: "0 0 10px", lineHeight: 1.5 }}>
+                {t.form.boardUrlHint}<span style={{ color: "#6C5CE7", fontWeight: 700 }}>1234567890</span>
+              </p>
+            )}
+            <input
+              type="text"
+              inputMode="numeric"
+              value={boardId}
+              onChange={(e) => setBoardId(e.target.value.replace(/\D/g, ""))}
+              onKeyDown={(e) => e.key === "Enter" && !loading && handleLoad()}
+              placeholder="1234567890"
+              style={{
+                width: "100%", background: "#F9F7FF",
+                border: `1.5px solid ${error ? "#E17055" : "rgba(108,92,231,0.15)"}`,
+                color: "#2D2252", borderRadius: 12,
+                padding: "14px 16px", fontSize: 20, fontWeight: 700,
+                outline: "none", direction: "ltr", textAlign: "center",
+                letterSpacing: "3px",
+                transition: "border-color 0.2s",
+              }}
+              onFocus={e => { if (!error) e.target.style.borderColor = "#6C5CE7"; }}
+              onBlur={e => { if (!error) e.target.style.borderColor = "rgba(108,92,231,0.15)"; }}
+            />
+
+            {error && (
+              <div style={{
+                background: "rgba(225,112,85,0.08)", border: "1px solid rgba(225,112,85,0.2)",
+                borderRadius: 10, padding: "10px 14px", marginTop: 14,
+                color: "#E17055", fontSize: 13, textAlign: "center",
+              }}>
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleLoad}
+              disabled={!boardId.trim() || !apiToken.trim() || loading}
+              style={{
+                width: "100%", marginTop: 20,
+                background: (!boardId.trim() || !apiToken.trim() || loading)
+                  ? "rgba(108,92,231,0.2)"
+                  : "linear-gradient(135deg, #6C5CE7, #A29BFE)",
+                color: "#FFF", border: "none", borderRadius: 12,
+                padding: "15px", fontSize: 16, fontWeight: 700,
+                cursor: (!boardId.trim() || !apiToken.trim() || loading) ? "not-allowed" : "pointer",
+                transition: "all 0.3s ease",
+                boxShadow: (!boardId.trim() || !apiToken.trim() || loading) ? "none" : "0 6px 20px rgba(108,92,231,0.25)",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              }}
+            >
+              {loading ? (
+                <><Spinner size={16} color="#FFF" /> {t.form.loading}</>
+              ) : (
+                t.form.loadBtn
+              )}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      {/* ── Contact ── */}
+      <section style={{
+        padding: "60px 24px", background: "#F9F7FF", textAlign: "center",
+      }}>
+        <div className="fade-up" style={{ maxWidth: 500, margin: "0 auto" }}>
+          <p style={{ fontSize: 22, fontWeight: 800, color: "#2D2252", marginBottom: 8 }}>
+            {t.contact.title}
+          </p>
+          <p style={{ fontSize: 16, color: "#7C6FD0", marginBottom: 28 }}>
+            {t.contact.sub}
+          </p>
+          <a href="mailto:hello@dayday.app" style={{
+            display: "inline-flex", alignItems: "center", gap: 10,
+            background: "linear-gradient(135deg, #6C5CE7, #A29BFE)",
+            color: "#FFF", border: "none", borderRadius: 14,
+            padding: "14px 36px", fontSize: 16, fontWeight: 700,
+            cursor: "pointer", textDecoration: "none",
+            boxShadow: "0 6px 20px rgba(108,92,231,0.25)",
+            transition: "all 0.3s ease",
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
+            </svg>
+            {t.contact.cta}
           </a>
         </div>
-      </main>
+      </section>
+
+      <footer style={{
+        background: "#2D2252", padding: "32px 24px", textAlign: "center",
+      }}>
+        <span style={{
+          fontSize: 16, fontWeight: 800,
+          background: "linear-gradient(90deg, #A29BFE, #FFFFFF)",
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+        }}>DayDay</span>
+        <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginTop: 10 }}>
+          &copy; {new Date().getFullYear()} DayDay. {t.footer}
+        </p>
+      </footer>
     </div>
   );
 }
