@@ -18,7 +18,7 @@ interface ChatSession {
   mode: string;
 }
 
-type SidePanel = "dashboard" | "automations" | "impact" | "branding" | "coming-soon" | null;
+type SidePanel = "dashboard" | "automations" | "impact" | "branding" | "report" | "alerts" | "coming-soon" | null;
 
 interface BrandConfig {
   orgName: string;
@@ -364,7 +364,7 @@ export function BoardDashboard({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sidePanel, setSidePanel] = useState<SidePanel>(null);
-  const [mode, setMode] = useState<"chat" | "dashboard" | "automations" | "impact">("chat");
+  const [mode, setMode] = useState<"chat" | "dashboard" | "automations" | "impact" | "report">("chat");
   const [panelWidth, setPanelWidth] = useState(340);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [brand, setBrand] = useState<BrandConfig>({
@@ -589,6 +589,13 @@ export function BoardDashboard({
         <polyline points="10 9 9 9 8 9" />
       </svg>
     ), label: "דוחות אימפקט" },
+    { modeId: "report" as "chat", panel: "report" as SidePanel, icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 4h16v16H4z" />
+        <path d="M4 10h16" />
+        <path d="M10 4v16" />
+      </svg>
+    ), label: "דוח הנהלה" },
   ];
 
   return (
@@ -637,6 +644,22 @@ export function BoardDashboard({
             </div>
           </div>
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {/* Alerts button */}
+        <button onClick={() => {
+          if (sidePanel === "alerts") { setSidePanel(null); } else { setSidePanel("alerts"); }
+        }} style={{
+          background: sidePanel === "alerts" ? hexToRgba(pc, 0.1) : "none",
+          border: `1px solid ${hexToRgba(pc, 0.15)}`, borderRadius: 8,
+          padding: "6px 10px", cursor: "pointer", color: pc, fontSize: 12, fontWeight: 600,
+          display: "flex", alignItems: "center", gap: 4, position: "relative",
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          התראות
+        </button>
         {/* Branding button */}
         <button onClick={() => {
           if (sidePanel === "branding") { setSidePanel(null); } else { setSidePanel("branding"); }
@@ -651,6 +674,7 @@ export function BoardDashboard({
           </svg>
           מיתוג
         </button>
+        </div>
       </div>
 
       {/* ── Main Area ── */}
@@ -796,6 +820,8 @@ export function BoardDashboard({
               {sidePanel === "dashboard" && <DashboardPanel board={board} items={items} pc={pc} ac={ac} />}
               {sidePanel === "automations" && <AutomationsPanel board={board} items={items} apiToken={apiToken} boardId={boardId} pc={pc} ac={ac} />}
               {sidePanel === "impact" && <ImpactPanel board={board} items={items} pc={pc} ac={ac} />}
+              {sidePanel === "report" && <ReportPanel board={board} items={items} pc={pc} ac={ac} orgName={brand.orgName} />}
+              {sidePanel === "alerts" && <AlertsPanel board={board} items={items} pc={pc} ac={ac} />}
               {sidePanel === "branding" && <BrandingPanel brand={brand} setBrand={setBrand} />}
               {sidePanel === "coming-soon" && (
                 <div>
@@ -2367,6 +2393,503 @@ ${chartsHtml}
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// ReportPanel - One-click management reports
+// ═══════════════════════════════════════════════════════
+
+function ReportPanel({ board, items, pc = "#6C5CE7", ac = "#A29BFE", orgName = "" }: {
+  board: MondayBoard; items: MondayItem[]; pc?: string; ac?: string; orgName?: string;
+}) {
+  const [reportType, setReportType] = useState<string>("management");
+  const [report, setReport] = useState<string>("");
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated] = useState(false);
+
+  function buildBoardContext() {
+    const statusDist: Record<string, number> = {};
+    items.forEach((item) =>
+      item.column_values.forEach((cv) => {
+        if (cv.column.type === "color" && cv.text)
+          statusDist[cv.text] = (statusDist[cv.text] || 0) + 1;
+      })
+    );
+    const sampleItems = items.slice(0, 30).map(it => {
+      const vals = it.column_values.filter(cv => cv.text).map(cv => `${cv.column.title}:${cv.text}`).join(", ");
+      return `${it.name} (${vals})`;
+    }).join(" | ");
+
+    return {
+      boardName: board.name,
+      itemsCount: board.items_count,
+      columns: board.columns.map((c) => `${c.id}: ${c.title} [${c.type}]`).join(", "),
+      statusDistribution: Object.entries(statusDist).map(([k, v]) => `${k}:${v}`).join(", ") || "אין",
+      sampleItems,
+    };
+  }
+
+  async function generateReport() {
+    setGenerating(true);
+    setReport("");
+    setGenerated(false);
+    try {
+      const res = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          boardContext: buildBoardContext(),
+          reportType,
+          orgName,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setReport(`שגיאה: ${data.error}`);
+      } else {
+        setReport(data.report);
+        setGenerated(true);
+      }
+    } catch {
+      setReport("שגיאה בחיבור לשרת");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function exportReportPDF() {
+    const now = new Date();
+    const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const displayName = orgName || board.name;
+
+    // Convert markdown-like report to HTML
+    const reportHtml = report
+      .split("\n")
+      .map(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return "<br/>";
+        if (trimmed.startsWith("### ")) return `<h3 style="font-size:16px;font-weight:700;color:${pc};margin:18px 0 8px;border-bottom:2px solid ${hexToRgba(pc, 0.15)};padding-bottom:6px">${trimmed.slice(4)}</h3>`;
+        if (trimmed.startsWith("## ")) return `<h2 style="font-size:20px;font-weight:800;color:#2D2252;margin:22px 0 10px">${trimmed.slice(3)}</h2>`;
+        if (trimmed.startsWith("# ")) return `<h1 style="font-size:24px;font-weight:800;color:#2D2252;margin:24px 0 12px">${trimmed.slice(2)}</h1>`;
+        if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) return `<div style="display:flex;gap:6px;margin-bottom:4px;padding-right:12px"><span style="color:${pc};font-weight:700">&#8226;</span><span>${trimmed.slice(2).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</span></div>`;
+        if (/^\d+\.\s/.test(trimmed)) return `<div style="display:flex;gap:6px;margin-bottom:4px"><span style="color:${pc};font-weight:700">${trimmed.match(/^\d+/)![0]}.</span><span>${trimmed.replace(/^\d+\.\s/, '').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</span></div>`;
+        if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+          if (/^\|[\s-:|]+\|$/.test(trimmed)) return ""; // skip separator
+          const cells = trimmed.slice(1, -1).split("|").map(c => c.trim());
+          const cellsHtml = cells.map(c => `<td style="padding:8px 12px;border-bottom:1px solid ${hexToRgba(pc, 0.1)};text-align:right">${c.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</td>`).join("");
+          return `<tr style="font-size:13px">${cellsHtml}</tr>`;
+        }
+        return `<p style="margin-bottom:6px;line-height:1.7">${trimmed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</p>`;
+      })
+      .join("\n");
+
+    // Wrap table rows
+    const finalHtml = reportHtml.replace(/(<tr[^>]*>[\s\S]*?<\/tr>\n?)+/g, (match) => {
+      return `<table style="width:100%;border-collapse:collapse;margin:12px 0;border:1px solid ${hexToRgba(pc, 0.1)};border-radius:8px;overflow:hidden;direction:rtl"><tbody>${match}</tbody></table>`;
+    });
+
+    const reportTypeLabels: Record<string, string> = {
+      management: "דוח מנהלים",
+      weekly: "דוח שבועי",
+      donors: "דוח למשקיעים",
+      kpi: "דוח KPIs",
+    };
+
+    const html = `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="utf-8">
+  <title>${reportTypeLabels[reportType] || "דוח"} - ${displayName}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Rubik',sans-serif; background:#FFF; padding:40px; color:#2D2252; direction:rtl; font-size:14px; line-height:1.6; }
+    @media print { body { padding:20px; } }
+    table tr:first-child td { background:${hexToRgba(pc, 0.05)}; font-weight:700; }
+    table tr:hover td { background:${hexToRgba(pc, 0.03)}; }
+  </style>
+</head>
+<body>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:30px;padding-bottom:18px;border-bottom:3px solid ${pc}">
+    <div>
+      <div style="font-size:28px;font-weight:800;color:#2D2252">${reportTypeLabels[reportType] || "דוח"}</div>
+      <div style="font-size:15px;color:${ac};margin-top:4px">${displayName} | ${dateStr} | ${board.items_count} פריטים</div>
+    </div>
+    <div style="width:50px;height:50px;border-radius:14px;background:linear-gradient(135deg,${pc},${ac});display:flex;align-items:center;justify-content:center;color:#FFF;font-size:22px;font-weight:800">
+      ${displayName.charAt(0)}
+    </div>
+  </div>
+  ${finalHtml}
+  <div style="text-align:center;margin-top:40px;padding-top:16px;border-top:2px solid ${hexToRgba(pc, 0.1)};font-size:11px;color:${ac}">
+    הופק ע"י DayDay | ${dateStr}
+  </div>
+</body>
+</html>`;
+
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      setTimeout(() => w.print(), 500);
+    }
+  }
+
+  const reportTypes = [
+    { id: "management", label: "דוח מנהלים", desc: "סיכום מקיף לדירקטוריון", icon: "briefcase" },
+    { id: "weekly", label: "דוח שבועי", desc: "עדכון קצר לצוות", icon: "calendar" },
+    { id: "donors", label: "דוח למשקיעים", desc: "התקדמות ו-ROI", icon: "heart" },
+    { id: "kpi", label: "דוח KPIs", desc: "מדדים ומגמות", icon: "trending" },
+  ];
+
+  const iconMap: Record<string, React.ReactNode> = {
+    briefcase: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>,
+    calendar: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+    heart: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+    trending: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+  };
+
+  return (
+    <div>
+      <h3 style={{ fontSize: 17, fontWeight: 700, color: "#2D2252", marginBottom: 4 }}>
+        דוח בלחיצה אחת
+      </h3>
+      <p style={{ fontSize: 12, color: ac, marginBottom: 18, lineHeight: 1.5 }}>
+        בחרו סוג דוח ו-DayDay ייצר אותו מהנתונים שלכם. מוכן לשליחה.
+      </p>
+
+      {/* Report type selector */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
+        {reportTypes.map(rt => (
+          <button key={rt.id} onClick={() => { setReportType(rt.id); setGenerated(false); setReport(""); }} style={{
+            padding: "12px 14px", borderRadius: 12, cursor: "pointer",
+            border: `1.5px solid ${reportType === rt.id ? pc : hexToRgba(pc, 0.1)}`,
+            background: reportType === rt.id ? hexToRgba(pc, 0.08) : "#FFF",
+            display: "flex", alignItems: "center", gap: 10, textAlign: "right",
+            transition: "all 0.15s",
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: reportType === rt.id ? `linear-gradient(135deg, ${pc}, ${ac})` : hexToRgba(pc, 0.06),
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: reportType === rt.id ? "#FFF" : pc, flexShrink: 0,
+            }}>
+              {iconMap[rt.icon]}
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#2D2252" }}>{rt.label}</div>
+              <div style={{ fontSize: 11, color: ac }}>{rt.desc}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Generate button */}
+      <button onClick={generateReport} disabled={generating} style={{
+        width: "100%", padding: "12px", borderRadius: 12, border: "none", cursor: generating ? "not-allowed" : "pointer",
+        background: `linear-gradient(135deg, ${pc}, ${ac})`,
+        color: "#FFF", fontSize: 14, fontWeight: 700,
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+        opacity: generating ? 0.7 : 1, transition: "all 0.2s", marginBottom: 16,
+      }}>
+        {generating ? (
+          <>
+            <Spinner size={14} color="#FFF" />
+            מייצר דוח...
+          </>
+        ) : (
+          <>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+            ייצר דוח עכשיו
+          </>
+        )}
+      </button>
+
+      {/* Report preview */}
+      {report && (
+        <div>
+          {generated && (
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <button onClick={exportReportPDF} style={{
+                flex: 1, padding: "8px", borderRadius: 8, border: "none",
+                background: `linear-gradient(135deg, ${pc}, ${ac})`,
+                color: "#FFF", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                ייצוא PDF
+              </button>
+              <button onClick={() => { navigator.clipboard.writeText(report); }} style={{
+                flex: 1, padding: "8px", borderRadius: 8,
+                border: `1.5px solid ${hexToRgba(pc, 0.2)}`,
+                background: "#FFF", color: pc, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                העתק טקסט
+              </button>
+            </div>
+          )}
+          <div style={{
+            background: hexToRgba(pc, 0.02), borderRadius: 14,
+            padding: "16px", border: `1px solid ${hexToRgba(pc, 0.08)}`,
+            fontSize: 13, lineHeight: 1.7, color: "#2D2252",
+            maxHeight: 500, overflowY: "auto",
+          }}>
+            <FormattedText text={report} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// AlertsPanel - Smart alerts detection
+// ═══════════════════════════════════════════════════════
+
+interface Alert {
+  type: "danger" | "warning" | "info";
+  title: string;
+  detail: string;
+  count: number;
+  items: string[];
+}
+
+function AlertsPanel({ board, items, pc = "#6C5CE7", ac = "#A29BFE" }: {
+  board: MondayBoard; items: MondayItem[]; pc?: string; ac?: string;
+}) {
+  // Analyze board for alerts
+  const alerts: Alert[] = [];
+
+  // 1. Empty columns (fill rate < 30%)
+  board.columns.forEach(col => {
+    const filled = items.filter(it => {
+      const cv = it.column_values.find(v => v.id === col.id);
+      return cv?.text && cv.text.trim() !== "";
+    }).length;
+    const rate = Math.round((filled / Math.max(items.length, 1)) * 100);
+    if (rate < 30 && rate > 0 && items.length > 5) {
+      alerts.push({
+        type: "warning",
+        title: `עמודה "${col.title}" כמעט ריקה`,
+        detail: `רק ${rate}% מהפריטים מולאו (${filled} מתוך ${items.length})`,
+        count: items.length - filled,
+        items: items.filter(it => {
+          const cv = it.column_values.find(v => v.id === col.id);
+          return !cv?.text || cv.text.trim() === "";
+        }).slice(0, 5).map(it => it.name),
+      });
+    }
+  });
+
+  // 2. Status bottlenecks (one status has >50% of items)
+  const statusDist: Record<string, { count: number; items: string[] }> = {};
+  items.forEach(item => {
+    item.column_values.forEach(cv => {
+      if (cv.column.type === "color" && cv.text) {
+        if (!statusDist[cv.text]) statusDist[cv.text] = { count: 0, items: [] };
+        statusDist[cv.text].count++;
+        if (statusDist[cv.text].items.length < 5) statusDist[cv.text].items.push(item.name);
+      }
+    });
+  });
+
+  Object.entries(statusDist).forEach(([status, data]) => {
+    const pct = Math.round((data.count / Math.max(items.length, 1)) * 100);
+    if (pct > 50 && data.count > 3) {
+      alerts.push({
+        type: "danger",
+        title: `צוואר בקבוק: "${status}"`,
+        detail: `${data.count} פריטים (${pct}%) מרוכזים בסטטוס אחד`,
+        count: data.count,
+        items: data.items,
+      });
+    }
+  });
+
+  // 3. Items with no status at all
+  const noStatus = items.filter(item => {
+    const hasStatus = item.column_values.some(cv => cv.column.type === "color" && cv.text);
+    return !hasStatus;
+  });
+  if (noStatus.length > 0) {
+    alerts.push({
+      type: "warning",
+      title: "פריטים בלי סטטוס",
+      detail: `${noStatus.length} פריטים ללא שום סטטוס מוגדר`,
+      count: noStatus.length,
+      items: noStatus.slice(0, 5).map(it => it.name),
+    });
+  }
+
+  // 4. Duplicate names
+  const nameCounts: Record<string, number> = {};
+  items.forEach(it => { nameCounts[it.name] = (nameCounts[it.name] || 0) + 1; });
+  const duplicates = Object.entries(nameCounts).filter(([, c]) => c > 1);
+  if (duplicates.length > 0) {
+    const totalDups = duplicates.reduce((sum, [, c]) => sum + c, 0);
+    alerts.push({
+      type: "info",
+      title: "פריטים עם שם כפול",
+      detail: `${duplicates.length} שמות חוזרים (${totalDups} פריטים)`,
+      count: totalDups,
+      items: duplicates.slice(0, 5).map(([name, count]) => `${name} (x${count})`),
+    });
+  }
+
+  // 5. Board health score
+  const totalCols = board.columns.length;
+  const avgFillRate = Math.round(
+    board.columns.reduce((sum, col) => {
+      const filled = items.filter(it => {
+        const cv = it.column_values.find(v => v.id === col.id);
+        return cv?.text && cv.text.trim() !== "";
+      }).length;
+      return sum + (filled / Math.max(items.length, 1)) * 100;
+    }, 0) / Math.max(totalCols, 1)
+  );
+
+  const healthScore = Math.max(0, Math.min(100,
+    100 - (alerts.filter(a => a.type === "danger").length * 20)
+        - (alerts.filter(a => a.type === "warning").length * 10)
+        - (alerts.filter(a => a.type === "info").length * 3)
+  ));
+
+  const healthColor = healthScore >= 70 ? "#00B894" : healthScore >= 40 ? "#FDCB6E" : "#E17055";
+  const healthLabel = healthScore >= 70 ? "מצוין" : healthScore >= 40 ? "דורש תשומת לב" : "קריטי";
+
+  const alertColors = {
+    danger: { bg: "#FFF0F0", border: "#FFD0D0", icon: "#E17055", text: "#C0392B" },
+    warning: { bg: "#FFF8E1", border: "#FFE8A0", icon: "#F39C12", text: "#D68910" },
+    info: { bg: "#E8F4FD", border: "#B0D9F1", icon: "#0984E3", text: "#2471A3" },
+  };
+
+  return (
+    <div>
+      <h3 style={{ fontSize: 17, fontWeight: 700, color: "#2D2252", marginBottom: 4 }}>
+        התראות חכמות
+      </h3>
+      <p style={{ fontSize: 12, color: ac, marginBottom: 18, lineHeight: 1.5 }}>
+        DayDay סורק את הבורד ומזהה בעיות אוטומטית
+      </p>
+
+      {/* Health Score */}
+      <div style={{
+        background: `linear-gradient(135deg, ${hexToRgba(pc, 0.04)}, ${hexToRgba(pc, 0.08)})`,
+        borderRadius: 16, padding: "20px", marginBottom: 18,
+        border: `1px solid ${hexToRgba(pc, 0.1)}`, textAlign: "center",
+      }}>
+        <div style={{ fontSize: 11, color: ac, marginBottom: 6, fontWeight: 600 }}>בריאות הבורד</div>
+        <div style={{
+          fontSize: 48, fontWeight: 800, color: healthColor,
+          lineHeight: 1,
+        }}>{healthScore}</div>
+        <div style={{
+          fontSize: 13, fontWeight: 600, color: healthColor, marginTop: 4,
+        }}>{healthLabel}</div>
+        <div style={{
+          height: 8, borderRadius: 4, background: hexToRgba(pc, 0.08),
+          overflow: "hidden", marginTop: 12,
+        }}>
+          <div style={{
+            height: "100%", borderRadius: 4, background: healthColor,
+            width: `${healthScore}%`, transition: "width 0.6s ease",
+          }} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 11, color: ac }}>
+          <span>מילוי ממוצע: {avgFillRate}%</span>
+          <span>{items.length} פריטים</span>
+        </div>
+      </div>
+
+      {/* Alert count summary */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {[
+          { type: "danger", label: "קריטי", color: "#E17055" },
+          { type: "warning", label: "אזהרה", color: "#F39C12" },
+          { type: "info", label: "מידע", color: "#0984E3" },
+        ].map(t => {
+          const count = alerts.filter(a => a.type === t.type).length;
+          return (
+            <div key={t.type} style={{
+              flex: 1, textAlign: "center", padding: "10px 6px", borderRadius: 10,
+              background: count > 0 ? `${t.color}12` : hexToRgba(pc, 0.03),
+              border: `1px solid ${count > 0 ? `${t.color}30` : hexToRgba(pc, 0.06)}`,
+            }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: count > 0 ? t.color : "#CCC" }}>{count}</div>
+              <div style={{ fontSize: 10, color: count > 0 ? t.color : "#999", fontWeight: 600 }}>{t.label}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Alerts list */}
+      {alerts.length === 0 ? (
+        <div style={{
+          textAlign: "center", padding: "24px",
+          background: "#F0FFF0", borderRadius: 14,
+          border: "1px solid #C8E6C8",
+        }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>&#10003;</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#00B894" }}>הבורד במצב מעולה!</div>
+          <div style={{ fontSize: 12, color: "#7C9A7C", marginTop: 4 }}>לא נמצאו בעיות</div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {alerts.sort((a, b) => {
+            const order = { danger: 0, warning: 1, info: 2 };
+            return order[a.type] - order[b.type];
+          }).map((alert, i) => {
+            const colors = alertColors[alert.type];
+            return (
+              <div key={i} style={{
+                background: colors.bg, borderRadius: 12,
+                border: `1px solid ${colors.border}`,
+                padding: "12px 14px",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: colors.icon, flexShrink: 0,
+                  }} />
+                  <div style={{ fontSize: 13, fontWeight: 700, color: colors.text }}>
+                    {alert.title}
+                  </div>
+                  <div style={{
+                    marginRight: "auto", fontSize: 10, fontWeight: 700,
+                    background: `${colors.icon}20`, color: colors.icon,
+                    padding: "2px 8px", borderRadius: 10,
+                  }}>{alert.count}</div>
+                </div>
+                <div style={{ fontSize: 12, color: colors.text, opacity: 0.8, marginBottom: 6 }}>
+                  {alert.detail}
+                </div>
+                {alert.items.length > 0 && (
+                  <div style={{ fontSize: 11, color: colors.text, opacity: 0.7 }}>
+                    {alert.items.map((item, j) => (
+                      <span key={j}>
+                        {j > 0 && " | "}
+                        {item}
+                      </span>
+                    ))}
+                    {alert.count > 5 && <span> | +{alert.count - 5} נוספים</span>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
