@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     const type = reportType || "management";
     const prompt = reportPrompts[type] || reportPrompts.management;
 
-    const systemPrompt = `אתה DayDay - מייצר דוחות מקצועיים מנתוני Monday.com.
+    const systemPrompt = `אתה AnyDay - מייצר דוחות מקצועיים מנתוני Monday.com.
 ${orgName ? `שם הארגון: ${orgName}` : ""}
 
 ## כללים:

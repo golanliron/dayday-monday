@@ -74,7 +74,7 @@ const T = {
   he: {
     nav: { features: "יתרונות", how: "איך זה עובד", pricing: "מחירים", cta: "התחילו עכשיו" },
     hero: {
-      badge: "DayDay",
+      badge: "AnyDay",
       title1: "הפכו את הטבלאות, האקסלים והמאנדיי שלכם",
       title2: "",
       titleBrand: "למערכת AI חכמה",
@@ -157,7 +157,7 @@ const T = {
   en: {
     nav: { features: "Features", how: "How it works", pricing: "Pricing", cta: "Get Started" },
     hero: {
-      badge: "DayDay",
+      badge: "AnyDay",
       title1: "AI that gets answers",
       title2: "from your ",
       titleBrand: "Monday",
@@ -231,7 +231,7 @@ const T = {
       ],
     },
     contact: {
-      title: "Want more from your DayDay?",
+      title: "Want more from your AnyDay?",
       sub: "Complaints, compliments, suggestions?",
       cta: "Contact Us",
     },
@@ -347,7 +347,7 @@ export default function Home() {
             fontSize: 20, fontWeight: 800,
             background: "linear-gradient(90deg, #6C5CE7, #A29BFE)",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-          }}>DayDay</span>
+          }}>AnyDay</span>
         </div>
         <div className="desktop-nav" style={{ display: "flex", gap: 28, alignItems: "center" }}>
           <a href="#features" style={{ color: "#6C5CE7", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>{t.nav.features}</a>
@@ -968,7 +968,7 @@ export default function Home() {
                   {lang === "he" ? "חברו את Google Sheets שלכם" : "Connect your Google Sheets"}
                 </h3>
                 <p style={{ fontSize: 13, color: "#7C6FD0", marginBottom: 20, lineHeight: 1.6 }}>
-                  {lang === "he" ? "הדביקו את הלינק של הגיליון שלכם ו-DayDay ינתח אותו" : "Paste your sheet link and DayDay will analyze it"}
+                  {lang === "he" ? "הדביקו את הלינק של הגיליון שלכם ו-AnyDay ינתח אותו" : "Paste your sheet link and AnyDay will analyze it"}
                 </p>
               </div>
 
@@ -1060,7 +1060,7 @@ export default function Home() {
                   {lang === "he" ? "העלו קובץ Excel" : "Upload Excel File"}
                 </h3>
                 <p style={{ fontSize: 13, color: "#7C6FD0", marginBottom: 20, lineHeight: 1.6 }}>
-                  {lang === "he" ? "גררו קובץ .xlsx או .csv ו-DayDay ינתח אותו" : "Drag an .xlsx or .csv file and DayDay will analyze it"}
+                  {lang === "he" ? "גררו קובץ .xlsx או .csv ו-AnyDay ינתח אותו" : "Drag an .xlsx or .csv file and AnyDay will analyze it"}
                 </p>
               </div>
 
@@ -1138,9 +1138,9 @@ export default function Home() {
           fontSize: 16, fontWeight: 800,
           background: "linear-gradient(90deg, #A29BFE, #FFFFFF)",
           WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-        }}>DayDay</span>
+        }}>AnyDay</span>
         <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginTop: 10 }}>
-          &copy; {new Date().getFullYear()} DayDay. {t.footer}
+          &copy; {new Date().getFullYear()} AnyDay. {t.footer}
         </p>
       </footer>
     </div>

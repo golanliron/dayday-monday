@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DayDay - שכבת ניהול חכמה מעל Monday.com",
+  title: "AnyDay - שכבת ניהול חכמה מעל Monday.com",
   description:
     "דשבורד חכם עם ניתוח AI לבורדים שלך ב-Monday.com. גרפים, תובנות, והצעות אוטומציה.",
 };

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "חסרה שאלה" }, { status: 400 });
     }
 
-    const systemPrompt = `אתה DayDay - מנוע AI שמבצע פעולות ישירות על Monday.com. אתה לא מסביר, אתה עושה.
+    const systemPrompt = `אתה AnyDay - מנוע AI שמבצע פעולות ישירות על Monday.com. אתה לא מסביר, אתה עושה.
 
 ## כלל ברזל:
 לעולם אל תגיד "אני לא יכול", "אי אפשר", "מצטער" או "אני ממליץ לך לעשות ב-Monday".

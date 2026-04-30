@@ -825,13 +825,13 @@ export function BoardDashboard({
               {sidePanel === "branding" && <BrandingPanel brand={brand} setBrand={setBrand} />}
               {sidePanel === "coming-soon" && (
                 <div>
-                  <h3 style={{ fontSize: 17, fontWeight: 700, color: "#2D2252", marginBottom: 4 }}>בקרוב ב-DayDay</h3>
+                  <h3 style={{ fontSize: 17, fontWeight: 700, color: "#2D2252", marginBottom: 4 }}>בקרוב ב-AnyDay</h3>
                   <p style={{ fontSize: 12, color: ac, marginBottom: 18, lineHeight: 1.5 }}>
                     פיצ׳רים שאנחנו עובדים עליהם עכשיו
                   </p>
                   {[
                     { icon: "🌍", title: "תרגום דוחות לאנגלית", desc: "הפקת דוחות אימפקט באנגלית ישירות מהמערכת, מוכנים לתורמים בינלאומיים" },
-                    { icon: "🔄", title: "ניהול מלא מכאן", desc: "עריכה, הוספה ומחיקה של פריטים ישירות מ-DayDay, בלי לפתוח מאנדיי" },
+                    { icon: "🔄", title: "ניהול מלא מכאן", desc: "עריכה, הוספה ומחיקה של פריטים ישירות מ-AnyDay, בלי לפתוח מאנדיי" },
                   ].map((item, i) => (
                     <div key={i} style={{
                       background: hexToRgba(pc, 0.04), borderRadius: 14,
@@ -1215,7 +1215,7 @@ function DashboardPanel({ board, items, pc = "#6C5CE7", ac = "#A29BFE" }: { boar
   </div>
   ${chartsHtml}
   <div style="text-align:center;margin-top:30px;padding-top:16px;border-top:1px solid ${hexToRgba(pc, 0.08)};font-size:11px;color:${ac}">
-    הופק ע״י DayDay · ${dateStr}
+    הופק ע״י AnyDay · ${dateStr}
   </div>
 </body>
 </html>`;
@@ -1572,7 +1572,7 @@ function AutomationsPanel({ board, items, apiToken, boardId, pc = "#6C5CE7", ac 
         אוטומציות אמיתיות
       </h3>
       <p style={{ fontSize: 12, color: ac, marginBottom: 16, lineHeight: 1.5 }}>
-        בחרו תנאי, בחרו פעולה, לחצו הפעל. DayDay מבצע את זה ישירות על הבורד.
+        בחרו תנאי, בחרו פעולה, לחצו הפעל. AnyDay מבצע את זה ישירות על הבורד.
       </p>
 
       {/* Saved automations */}
@@ -1897,7 +1897,7 @@ function BrandingPanel({ brand, setBrand }: { brand: BrandConfig; setBrand: (b: 
               fontSize: 14, fontWeight: 800,
               background: `linear-gradient(90deg, ${brand.colors[0]}, ${brand.colors[1]})`,
               WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-            }}>{brand.orgName || "DayDay"}</span>
+            }}>{brand.orgName || "AnyDay"}</span>
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", gap: 4 }}>
               {brand.colors.map((c, i) => (
@@ -2107,7 +2107,7 @@ function BrandingPanel({ brand, setBrand }: { brand: BrandConfig; setBrand: (b: 
         <label style={labelStyle}>ערכות צבעים מוכנות</label>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {[
-            { name: "DayDay", colors: ["#6C5CE7", "#A29BFE", "#00B894", "#FDCB6E"] as [string, string, string, string] },
+            { name: "AnyDay", colors: ["#6C5CE7", "#A29BFE", "#00B894", "#FDCB6E"] as [string, string, string, string] },
             { name: "ים וחול", colors: ["#0984E3", "#74B9FF", "#00CEC9", "#FFEAA7"] as [string, string, string, string] },
             { name: "יער", colors: ["#00B894", "#55EFC4", "#2D3436", "#DFE6E9"] as [string, string, string, string] },
             { name: "שקיעה", colors: ["#E17055", "#FAB1A0", "#FDCB6E", "#6C5CE7"] as [string, string, string, string] },
@@ -2260,7 +2260,7 @@ function ImpactPanel({ board, items, pc = "#6C5CE7", ac = "#A29BFE" }: { board: 
 ${chartsHtml}
 <div style="font-size:18px;font-weight:700;margin-bottom:12px">שלמות נתונים (${avgFillRate}%)</div>
 <div style="border-radius:14px;border:1px solid ${hexToRgba(pc, 0.1)};overflow:hidden;margin-bottom:16px"><table style="width:100%;border-collapse:collapse"><thead><tr style="background:${hexToRgba(pc, 0.06)}"><th style="padding:10px;text-align:right;font-weight:700;border-bottom:2px solid ${hexToRgba(pc, 0.15)}">עמודה</th><th style="padding:10px;text-align:center;font-weight:700;border-bottom:2px solid ${hexToRgba(pc, 0.15)}">מלא</th><th style="padding:10px;text-align:right;font-weight:700;border-bottom:2px solid ${hexToRgba(pc, 0.15)}">אחוז</th></tr></thead><tbody>${completenessRows}</tbody></table></div>
-<div style="text-align:center;margin-top:30px;padding-top:16px;border-top:2px solid ${hexToRgba(pc, 0.1)};font-size:11px;color:${ac}">הופק ע״י DayDay | ${dateStr}</div>
+<div style="text-align:center;margin-top:30px;padding-top:16px;border-top:2px solid ${hexToRgba(pc, 0.1)};font-size:11px;color:${ac}">הופק ע״י AnyDay | ${dateStr}</div>
 </body></html>`;
 
     const w = window.open("", "_blank");
@@ -2523,7 +2523,7 @@ function ReportPanel({ board, items, pc = "#6C5CE7", ac = "#A29BFE", orgName = "
   </div>
   ${finalHtml}
   <div style="text-align:center;margin-top:40px;padding-top:16px;border-top:2px solid ${hexToRgba(pc, 0.1)};font-size:11px;color:${ac}">
-    הופק ע"י DayDay | ${dateStr}
+    הופק ע"י AnyDay | ${dateStr}
   </div>
 </body>
 </html>`;
@@ -2556,7 +2556,7 @@ function ReportPanel({ board, items, pc = "#6C5CE7", ac = "#A29BFE", orgName = "
         דוח בלחיצה אחת
       </h3>
       <p style={{ fontSize: 12, color: ac, marginBottom: 18, lineHeight: 1.5 }}>
-        בחרו סוג דוח ו-DayDay ייצר אותו מהנתונים שלכם. מוכן לשליחה.
+        בחרו סוג דוח ו-AnyDay ייצר אותו מהנתונים שלכם. מוכן לשליחה.
       </p>
 
       {/* Report type selector */}
@@ -2780,7 +2780,7 @@ function AlertsPanel({ board, items, pc = "#6C5CE7", ac = "#A29BFE" }: {
         התראות חכמות
       </h3>
       <p style={{ fontSize: 12, color: ac, marginBottom: 18, lineHeight: 1.5 }}>
-        DayDay סורק את הבורד ומזהה בעיות אוטומטית
+        AnyDay סורק את הבורד ומזהה בעיות אוטומטית
       </p>
 
       {/* Health Score */}
