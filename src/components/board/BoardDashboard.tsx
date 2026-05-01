@@ -20,7 +20,7 @@ interface ChatSession {
   mode: string;
 }
 
-type SidePanel = "dashboard" | "automations" | "impact" | "branding" | "report" | "alerts" | "coming-soon" | null;
+type SidePanel = "dashboard" | "automations" | "impact" | "branding" | "report" | "alerts" | "trends" | "coming-soon" | null;
 
 interface BrandConfig {
   orgName: string;
@@ -593,6 +593,11 @@ export function BoardDashboard({
         <polyline points="10 9 9 9 8 9" />
       </svg>
     ), label: "דוחות אימפקט" },
+    { modeId: "impact" as "chat", panel: "trends" as SidePanel, icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </svg>
+    ), label: "טרנדים" },
     { modeId: "report" as "chat", panel: "report" as SidePanel, icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 4h16v16H4z" />
@@ -857,6 +862,8 @@ export function BoardDashboard({
               {sidePanel === "impact" && <ImpactPanel board={board} items={items} pc={pc} ac={ac} />}
               {sidePanel === "report" && <ReportPanel board={board} items={items} pc={pc} ac={ac} orgName={brand.orgName} />}
               {sidePanel === "alerts" && <AlertsPanel board={board} items={items} pc={pc} ac={ac} />}
+              {sidePanel === "trends" && <TrendsPanel board={board} items={items} pc={pc} ac={ac} />}
+              {sidePanel === "trends" && <TrendsPanel board={board} items={items} pc={pc} ac={ac} />}
               {sidePanel === "branding" && <BrandingPanel brand={brand} setBrand={setBrand} />}
               {sidePanel === "coming-soon" && (
                 <div>
@@ -2950,6 +2957,261 @@ function AlertsPanel({ board, items, pc = "#6C5CE7", ac = "#A29BFE" }: {
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+
+// TrendsPanel - Period comparison & change detection
+
+function TrendsPanel({ board, items, pc = "#6C5CE7", ac = "#A29BFE" }: {
+  board: MondayBoard; items: MondayItem[]; pc?: string; ac?: string;
+}) {
+  const [period, setPeriod] = useState<"week" | "month" | "quarter">("month");
+
+  const dateColumns = board.columns.filter(c => c.type === "date");
+  const statusColumns = board.columns.filter(c => c.type === "color");
+
+  function getItemDate(item: MondayItem): Date | null {
+    for (const dc of dateColumns) {
+      const cv = item.column_values.find(v => v.id === dc.id);
+      if (cv?.text) {
+        const d = new Date(cv.text);
+        if (!isNaN(d.getTime())) return d;
+      }
+    }
+    return null;
+  }
+
+  const now = new Date();
+  const periodDays = period === "week" ? 7 : period === "month" ? 30 : 90;
+  const currentStart = new Date(now.getTime() - periodDays * 86400000);
+  const prevStart = new Date(currentStart.getTime() - periodDays * 86400000);
+
+  const currentItems: MondayItem[] = [];
+  const prevItems: MondayItem[] = [];
+  const noDateItems: MondayItem[] = [];
+
+  items.forEach(item => {
+    const d = getItemDate(item);
+    if (!d) { noDateItems.push(item); return; }
+    if (d >= currentStart) currentItems.push(item);
+    else if (d >= prevStart) prevItems.push(item);
+  });
+
+  function getStatusDist(itemList: MondayItem[]): Record<string, number> {
+    const dist: Record<string, number> = {};
+    itemList.forEach(item => {
+      statusColumns.forEach(sc => {
+        const cv = item.column_values.find(v => v.id === sc.id);
+        if (cv?.text) dist[cv.text] = (dist[cv.text] || 0) + 1;
+      });
+    });
+    return dist;
+  }
+
+  const currentStatus = getStatusDist(currentItems);
+  const prevStatus = getStatusDist(prevItems);
+  const allStatuses = [...new Set([...Object.keys(currentStatus), ...Object.keys(prevStatus)])];
+
+  const changes = allStatuses.map(status => {
+    const curr = currentStatus[status] || 0;
+    const prev = prevStatus[status] || 0;
+    return { status, curr, prev, diff: curr - prev };
+  }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+
+  function getPeopleDist(itemList: MondayItem[]): Record<string, number> {
+    const dist: Record<string, number> = {};
+    itemList.forEach(item => {
+      item.column_values.forEach(cv => {
+        if (["person", "multiple-person"].includes(cv.column.type) && cv.text) {
+          cv.text.split(",").map(n => n.trim()).filter(Boolean).forEach(name => {
+            dist[name] = (dist[name] || 0) + 1;
+          });
+        }
+      });
+    });
+    return dist;
+  }
+
+  const currentPeople = getPeopleDist(currentItems);
+  const prevPeople = getPeopleDist(prevItems);
+  const allPeople = [...new Set([...Object.keys(currentPeople), ...Object.keys(prevPeople)])];
+  const peopleChanges = allPeople.map(name => {
+    const curr = currentPeople[name] || 0;
+    const prev = prevPeople[name] || 0;
+    return { name, curr, prev, diff: curr - prev };
+  }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff)).slice(0, 8);
+
+  const timelineMap: Record<string, number> = {};
+  [...currentItems, ...prevItems].forEach(item => {
+    const d = getItemDate(item);
+    if (d) {
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      timelineMap[key] = (timelineMap[key] || 0) + 1;
+    }
+  });
+  const timeline = Object.entries(timelineMap)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, count]) => ({ date: date.slice(5), count, inCurrent: new Date(date) >= currentStart }));
+
+  const currentVelocity = periodDays > 0 ? (currentItems.length / periodDays).toFixed(1) : "0";
+  const velocityChange = prevItems.length > 0
+    ? Math.round(((currentItems.length - prevItems.length) / prevItems.length) * 100)
+    : 0;
+
+  const hasData = dateColumns.length > 0 && (currentItems.length > 0 || prevItems.length > 0);
+
+  const cardStyle: React.CSSProperties = {
+    background: hexToRgba(pc, 0.03), borderRadius: 12, padding: 14,
+    border: `1px solid ${hexToRgba(pc, 0.1)}`, marginBottom: 12,
+  };
+
+  function ChangeArrow({ up }: { up: boolean }) {
+    return (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+        style={{ color: up ? "#00B894" : "#E17055", transform: up ? "none" : "rotate(180deg)" }}>
+        <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
+      </svg>
+    );
+  }
+
+  const pLabels: Record<string, string> = { week: "שבוע", month: "חודש", quarter: "רבעון" };
+
+  return (
+    <div>
+      <h3 style={{ fontSize: 17, fontWeight: 700, color: "#2D2252", marginBottom: 4 }}>
+        טרנדים והשוואות
+      </h3>
+      <p style={{ fontSize: 12, color: ac, marginBottom: 14, lineHeight: 1.5 }}>
+        מה השתנה? לאן זזים? מספרים לא משקרים.
+      </p>
+
+      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+        {(["week", "month", "quarter"] as const).map(p => (
+          <button key={p} onClick={() => setPeriod(p)} style={{
+            flex: 1, padding: "8px 0", borderRadius: 8, cursor: "pointer",
+            border: `1.5px solid ${period === p ? pc : hexToRgba(pc, 0.1)}`,
+            background: period === p ? hexToRgba(pc, 0.1) : "#FFF",
+            color: period === p ? pc : "#999", fontSize: 12, fontWeight: 600,
+          }}>
+            {pLabels[p]}
+          </button>
+        ))}
+      </div>
+
+      {!hasData ? (
+        <div style={{ textAlign: "center", padding: "24px", background: hexToRgba(pc, 0.03), borderRadius: 14, border: `1px solid ${hexToRgba(pc, 0.08)}` }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>&#128197;</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#2D2252" }}>אין עמודת תאריך בבורד</div>
+          <div style={{ fontSize: 12, color: ac, marginTop: 4 }}>הוסיפו עמודת Date ב-Monday כדי לראות טרנדים</div>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+            <div style={{ background: "#F9F7FF", borderRadius: 10, padding: "10px 8px", border: `1px solid ${hexToRgba(pc, 0.08)}`, textAlign: "center" }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: pc }}>{currentItems.length}</div>
+              <div style={{ fontSize: 9, color: "#7C6FD0", marginTop: 2 }}>תקופה נוכחית</div>
+              {prevItems.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, color: currentItems.length >= prevItems.length ? "#00B894" : "#E17055", marginTop: 3 }}>{currentItems.length >= prevItems.length ? "+" : ""}{currentItems.length - prevItems.length}</div>}
+            </div>
+            <div style={{ background: "#F9F7FF", borderRadius: 10, padding: "10px 8px", border: `1px solid ${hexToRgba(pc, 0.08)}`, textAlign: "center" }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: pc }}>{prevItems.length}</div>
+              <div style={{ fontSize: 9, color: "#7C6FD0", marginTop: 2 }}>תקופה קודמת</div>
+            </div>
+            <div style={{ background: "#F9F7FF", borderRadius: 10, padding: "10px 8px", border: `1px solid ${hexToRgba(pc, 0.08)}`, textAlign: "center" }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: pc }}>{currentVelocity}</div>
+              <div style={{ fontSize: 9, color: "#7C6FD0", marginTop: 2 }}>קצב יומי</div>
+              {velocityChange !== 0 && <div style={{ fontSize: 10, fontWeight: 700, color: velocityChange >= 0 ? "#00B894" : "#E17055", marginTop: 3 }}>{velocityChange > 0 ? "+" : ""}{velocityChange}%</div>}
+            </div>
+          </div>
+
+          {timeline.length > 1 && (
+            <div style={cardStyle}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#2D2252", marginBottom: 10 }}>פעילות לאורך זמן</div>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 60 }}>
+                {timeline.map((t, i) => {
+                  const maxCount = Math.max(...timeline.map(x => x.count));
+                  const h = maxCount > 0 ? Math.max(4, (t.count / maxCount) * 56) : 4;
+                  return (
+                    <div key={i} title={`${t.date}: ${t.count}`} style={{
+                      flex: 1, height: h, borderRadius: 3,
+                      background: t.inCurrent ? `linear-gradient(180deg, ${pc}, ${ac})` : hexToRgba(pc, 0.15),
+                      transition: "height 0.3s ease", cursor: "pointer",
+                    }} />
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 9, color: ac }}>
+                <span>קודם</span>
+                <span>נוכחי</span>
+              </div>
+            </div>
+          )}
+
+          {changes.length > 0 && (
+            <div style={cardStyle}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#2D2252", marginBottom: 10 }}>שינוי בסטטוסים</div>
+              {changes.slice(0, 6).map((c, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: i < Math.min(changes.length, 6) - 1 ? `1px solid ${hexToRgba(pc, 0.06)}` : "none" }}>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "#2D2252" }}>{c.status}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 11, color: ac }}>{c.prev}</span>
+                    <span style={{ fontSize: 11, color: "#999" }}>→</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: pc }}>{c.curr}</span>
+                    {c.diff !== 0 && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: c.diff > 0 ? "#00B894" : "#E17055", background: c.diff > 0 ? "rgba(0,184,148,0.1)" : "rgba(225,112,85,0.1)", padding: "1px 6px", borderRadius: 4, display: "flex", alignItems: "center", gap: 2 }}>
+                        <ChangeArrow up={c.diff > 0} />
+                        {c.diff > 0 ? `+${c.diff}` : c.diff}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {peopleChanges.length > 0 && (
+            <div style={cardStyle}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#2D2252", marginBottom: 10 }}>שינוי עומס לפי אנשים</div>
+              {peopleChanges.slice(0, 5).map((p, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 0", borderBottom: i < Math.min(peopleChanges.length, 5) - 1 ? `1px solid ${hexToRgba(pc, 0.06)}` : "none" }}>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "#2D2252" }}>{p.name}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 11, color: ac }}>{p.prev}</span>
+                    <span style={{ fontSize: 11, color: "#999" }}>→</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: pc }}>{p.curr}</span>
+                    {p.diff !== 0 && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: p.diff > 0 ? "#E17055" : "#00B894", background: p.diff > 0 ? "rgba(225,112,85,0.1)" : "rgba(0,184,148,0.1)", padding: "1px 6px", borderRadius: 4, display: "flex", alignItems: "center", gap: 2 }}>
+                        <ChangeArrow up={p.diff > 0} />
+                        {p.diff > 0 ? `+${p.diff}` : p.diff}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ background: `linear-gradient(135deg, ${hexToRgba(pc, 0.06)}, ${hexToRgba(ac, 0.06)})`, borderRadius: 12, padding: 14, border: `1px solid ${hexToRgba(pc, 0.1)}` }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#2D2252", marginBottom: 6 }}>סיכום מגמה</div>
+            <div style={{ fontSize: 12, color: "#2D2252", lineHeight: 1.6 }}>
+              {currentItems.length > prevItems.length ? (
+                <>עלייה של <strong style={{ color: "#00B894" }}>{currentItems.length - prevItems.length} פריטים</strong> ({velocityChange > 0 ? `+${velocityChange}%` : `${velocityChange}%`}) לעומת התקופה הקודמת.{parseFloat(currentVelocity) > 1 && ` קצב: ${currentVelocity} פריטים/יום.`}</>
+              ) : currentItems.length < prevItems.length ? (
+                <>ירידה של <strong style={{ color: "#E17055" }}>{prevItems.length - currentItems.length} פריטים</strong> ({velocityChange}%) לעומת התקופה הקודמת.</>
+              ) : (
+                <>יציבות מלאה. ({currentItems.length} פריטים בשתי התקופות.)</>
+              )}
+            </div>
+          </div>
+
+          {noDateItems.length > 0 && (
+            <div style={{ fontSize: 10, color: ac, marginTop: 8, textAlign: "center" }}>
+              {noDateItems.length} פריטים ללא תאריך
+            </div>
+          )}
+        </>
       )}
     </div>
   );
