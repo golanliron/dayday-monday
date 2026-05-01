@@ -1,5 +1,7 @@
 "use client";
 
+import { useSession, signOut } from "next-auth/react";
+
 import { useState, useRef, useEffect } from "react";
 import { Spinner } from "../ui/Spinner";
 import type { MondayBoard, MondayItem } from "@/types";
@@ -373,6 +375,7 @@ export function BoardDashboard({
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [mobilePanel, setMobilePanel] = useState(false);
+  const { data: session } = useSession();
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -687,6 +690,17 @@ export function BoardDashboard({
           </svg>
           מיתוג
         </button>
+        {/* User profile */}
+        {session?.user && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 8, borderRight: "1px solid rgba(108,92,231,0.1)", paddingRight: 12 }}>
+            <img src={session.user.image || ""} alt="" style={{
+              width: 28, height: 28, borderRadius: "50%", border: `2px solid ${hexToRgba(pc, 0.2)}`,
+            }} />
+            <span className="dash-header-info" style={{ fontSize: 12, fontWeight: 600, color: "#2D2252" }}>
+              {session.user.name?.split(" ")[0]}
+            </span>
+          </div>
+        )}
         </div>
       </div>
 

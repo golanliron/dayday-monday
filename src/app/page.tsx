@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useSession, signOut } from "next-auth/react";
 import { Spinner } from "@/components/ui/Spinner";
 import { BoardDashboard } from "@/components/board/BoardDashboard";
 import { loadBoard } from "@/lib/api-client";
