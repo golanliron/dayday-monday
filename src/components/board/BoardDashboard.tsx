@@ -1088,6 +1088,31 @@ export function BoardDashboard({
         </div>
 
       </div>
+
+      {/* ── Mobile Bottom Nav ── */}
+      <div className="dash-mobile-nav" style={{
+        display: "none", position: "fixed", bottom: 0, left: 0, right: 0,
+        background: "#FFFFFF", borderTop: "2px solid rgba(108,92,231,0.15)",
+        padding: "4px 8px env(safe-area-inset-bottom, 8px)", zIndex: 90,
+        justifyContent: "space-around", alignItems: "center",
+        boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
+      }}>
+        {NAV_ITEMS.map((n, idx) => (
+          <button key={idx} onClick={() => {
+            setMode(n.modeId);
+            setSidePanel(n.panel);
+          }} style={{
+            background: mode === n.modeId ? "rgba(108,92,231,0.12)" : "transparent",
+            border: "none", borderRadius: 10, padding: "6px 10px", cursor: "pointer",
+            color: mode === n.modeId ? pc : "#999",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+            fontSize: 9, fontWeight: 600, transition: "all 0.2s",
+          }}>
+            {n.icon}
+            <span>{n.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -2912,31 +2937,6 @@ function AlertsPanel({ board, items, pc = "#6C5CE7", ac = "#A29BFE" }: {
           })}
         </div>
       )}
-
-      {/* ── Mobile Bottom Nav ── */}
-      <div className="dash-mobile-nav" style={{
-        display: "none", position: "fixed", bottom: 0, left: 0, right: 0,
-        background: "#FFFFFF", borderTop: "2px solid rgba(108,92,231,0.15)",
-        padding: "4px 8px env(safe-area-inset-bottom, 8px)", zIndex: 90,
-        justifyContent: "space-around", alignItems: "center",
-        boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
-      }}>
-        {NAV_ITEMS.map((n, idx) => (
-          <button key={idx} onClick={() => {
-            setMode(n.modeId);
-            setSidePanel(n.panel);
-          }} style={{
-            background: mode === n.modeId ? "rgba(108,92,231,0.12)" : "transparent",
-            border: "none", borderRadius: 10, padding: "6px 10px", cursor: "pointer",
-            color: mode === n.modeId ? pc : "#999",
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-            fontSize: 9, fontWeight: 600, transition: "all 0.2s",
-          }}>
-            {n.icon}
-            <span>{n.label}</span>
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
