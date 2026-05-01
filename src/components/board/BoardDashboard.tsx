@@ -372,6 +372,7 @@ export function BoardDashboard({
   });
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -606,6 +607,18 @@ export function BoardDashboard({
       "--brand-pc": pc,
       "--brand-ac": ac,
     } as React.CSSProperties}>
+      <style>{`
+        @media (max-width: 768px) {
+          .dash-sidebar { display: none !important; }
+          .dash-mobile-nav { display: flex !important; }
+          .dash-side-panel { position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100% !important; z-index: 100 !important; padding-top: 50px !important; }
+          .dash-panel-drag { display: none !important; }
+          .dash-history { position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100% !important; z-index: 100 !important; }
+          .dash-header-actions button span:not(.icon-only) { display: none; }
+          .dash-header-info { display: none !important; }
+          .dash-chat-area { padding: 12px 8px !important; }
+        }
+      `}</style>
       {/* ── Header ── */}
       <div style={{
         background: "#FFFFFF", borderBottom: `3px solid ${pc}`,
@@ -635,7 +648,7 @@ export function BoardDashboard({
               cursor: "pointer",
             }}>{brand.orgName ? brand.orgName.charAt(0) : "D"}</div>
           )}
-          <div>
+          <div className="dash-header-info">
             <div style={{ fontSize: 15, fontWeight: 700, color: "#2D2252" }}>
               {hasBrand && brand.orgName ? brand.orgName : board.name}
             </div>
@@ -685,7 +698,7 @@ export function BoardDashboard({
           width: 60, background: hexToRgba(pc, 0.03), borderLeft: `2px solid ${hexToRgba(pc, 0.12)}`,
           display: "flex", flexDirection: "column", alignItems: "center",
           paddingTop: 16, gap: 8, flexShrink: 0,
-        }}>
+        }} className="dash-sidebar">
           {NAV_ITEMS.map((n, idx) => (
             <button key={idx} onClick={() => {
               setMode(n.modeId);
@@ -764,7 +777,7 @@ export function BoardDashboard({
           <div style={{
             width: 260, background: "#FFF", borderLeft: `1px solid ${hexToRgba(pc, 0.1)}`,
             overflowY: "auto", flexShrink: 0, padding: "16px 12px",
-          }}>
+          }} className="dash-history">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, color: "#2D2252", margin: 0 }}>היסטוריית שיחות</h3>
               <button onClick={() => setShowHistory(false)} style={{
@@ -816,7 +829,15 @@ export function BoardDashboard({
               width: panelWidth, background: "#FFFFFF", overflowY: "auto",
               borderLeft: `1px solid ${hexToRgba(pc, 0.08)}`,
               padding: 20, flexShrink: 0,
-            }}>
+            }} className="dash-side-panel">
+              {/* Mobile close */}
+              <button className="dash-mobile-nav" onClick={() => setSidePanel(null)} style={{
+                display: "none", position: "sticky", top: 0, zIndex: 10, marginBottom: 12,
+                background: "rgba(0,0,0,0.05)", border: "none", borderRadius: 8, padding: "8px 14px",
+                cursor: "pointer", color: "#2D2252", fontSize: 13, fontWeight: 600, width: "100%",
+              }}>
+                סגור פאנל X
+              </button>
               {sidePanel === "dashboard" && <DashboardPanel board={board} items={items} pc={pc} ac={ac} />}
               {sidePanel === "automations" && <AutomationsPanel board={board} items={items} apiToken={apiToken} boardId={boardId} pc={pc} ac={ac} />}
               {sidePanel === "impact" && <ImpactPanel board={board} items={items} pc={pc} ac={ac} />}
@@ -862,6 +883,7 @@ export function BoardDashboard({
                 background: "transparent", position: "relative",
                 transition: "background 0.15s",
               }}
+              className="dash-panel-drag"
               onMouseEnter={e => (e.currentTarget.style.background = hexToRgba(pc, 0.15))}
               onMouseLeave={e => { if (!isDragging.current) e.currentTarget.style.background = "transparent"; }}
             >
@@ -2890,6 +2912,31 @@ function AlertsPanel({ board, items, pc = "#6C5CE7", ac = "#A29BFE" }: {
           })}
         </div>
       )}
+
+      {/* ── Mobile Bottom Nav ── */}
+      <div className="dash-mobile-nav" style={{
+        display: "none", position: "fixed", bottom: 0, left: 0, right: 0,
+        background: "#FFFFFF", borderTop: "2px solid rgba(108,92,231,0.15)",
+        padding: "4px 8px env(safe-area-inset-bottom, 8px)", zIndex: 90,
+        justifyContent: "space-around", alignItems: "center",
+        boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
+      }}>
+        {NAV_ITEMS.map((n, idx) => (
+          <button key={idx} onClick={() => {
+            setMode(n.modeId);
+            setSidePanel(n.panel);
+          }} style={{
+            background: mode === n.modeId ? "rgba(108,92,231,0.12)" : "transparent",
+            border: "none", borderRadius: 10, padding: "6px 10px", cursor: "pointer",
+            color: mode === n.modeId ? pc : "#999",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+            fontSize: 9, fontWeight: 600, transition: "all 0.2s",
+          }}>
+            {n.icon}
+            <span>{n.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

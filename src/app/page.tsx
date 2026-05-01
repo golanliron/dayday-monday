@@ -320,13 +320,23 @@ export default function Home() {
         @media (max-width: 768px) {
           .desktop-nav { display: none !important; }
           .mobile-burger { display: flex !important; }
-          .features-grid { grid-template-columns: 1fr 1fr !important; }
-          .hero-title { font-size: 32px !important; }
-          .hero-sub { font-size: 16px !important; }
-          .section-pad { padding: 50px 16px !important; }
+          .features-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+          .hero-title { font-size: 28px !important; }
+          .hero-sub { font-size: 15px !important; }
+          .section-pad { padding: 40px 16px !important; }
+          section { padding-left: 16px !important; padding-right: 16px !important; }
+          section h2 { font-size: 24px !important; }
+          .pricing-grid { grid-template-columns: 1fr 1fr !important; }
+          .brand-addon { flex-direction: column !important; text-align: center !important; padding: 24px 16px !important; }
+          .brand-addon > div { text-align: center !important; min-width: unset !important; }
+          .form-tabs { flex-direction: column !important; }
+          .form-tabs button { font-size: 14px !important; }
+          .form-card { padding: 24px 16px !important; }
         }
         @media (max-width: 480px) {
           .features-grid { grid-template-columns: 1fr !important; }
+          .pricing-grid { grid-template-columns: 1fr !important; }
+          section { padding-top: 40px !important; padding-bottom: 40px !important; }
         }
       `}</style>
       {/* ── Navbar ── */}
@@ -573,7 +583,7 @@ export default function Home() {
           <div style={{
             display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
             gap: 20, alignItems: "stretch",
-          }}>
+          }} className="pricing-grid">
             {t.pricing.plans.map((plan, idx) => ({ ...plan, price: ["250", "450", "750", "1,200"][idx], popular: idx === 2 })).map((plan, i) => (
               <div key={i} style={{
                 background: plan.popular ? "linear-gradient(135deg, #6C5CE7, #A29BFE)" : "#FFFFFF",
@@ -657,7 +667,7 @@ export default function Home() {
               borderRadius: 22, padding: "36px 40px",
               display: "flex", alignItems: "center", justifyContent: "space-between",
               gap: 28, flexWrap: "wrap", position: "relative", overflow: "hidden",
-            }}>
+            }} className="brand-addon">
               {/* Decorative sparkles */}
               <div style={{
                 position: "absolute", top: 14, left: 20, fontSize: 20, opacity: 0.3,
@@ -736,9 +746,9 @@ export default function Home() {
             border: "1px solid rgba(108,92,231,0.1)",
             boxShadow: "0 8px 40px rgba(108,92,231,0.08)",
             textAlign: "right",
-          }}>
+          }} className="form-card">
             {/* Data Source Tabs */}
-            <div style={{ display: "flex", gap: 6, marginBottom: 24, background: "rgba(108,92,231,0.04)", borderRadius: 14, padding: 4 }}>
+            <div className="form-tabs" style={{ display: "flex", gap: 6, marginBottom: 24, background: "rgba(108,92,231,0.04)", borderRadius: 14, padding: 4 }}>
               {([
                 { id: "monday" as const, label: "Monday.com", icon: "M" },
                 { id: "sheets" as const, label: "Google Sheets", icon: "S" },
